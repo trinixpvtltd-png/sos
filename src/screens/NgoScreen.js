@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import {
   Image,
   Pressable,
@@ -113,60 +114,65 @@ export const NgoScreen = () => {
             </View>
           ))}
         </ScrollView>
+        
         {drawerOpen ? (
-          <Pressable style={styles.backdrop} onPress={() => setDrawerOpen(false)}>
+          <View style={styles.overlay} pointerEvents="box-none">
+            <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
+            <View style={styles.drawerRow}>
+              <Pressable style={styles.drawer} onPress={(e) => e.stopPropagation()}>
+                <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
+                <View style={styles.drawerSection}>
+                  <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Contributions</Text>
+                  <TouchableOpacity
+                    style={styles.drawerItem}
+                    activeOpacity={0.9}
+                    onPress={() => handleContributionPress('made')}
+                  >
+                    <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
+                      {strings.contributions?.made ?? 'Contribution Made'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.drawerItem}
+                    activeOpacity={0.9}
+                    onPress={() => handleContributionPress('received')}
+                  >
+                    <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
+                      {strings.contributions?.received ?? 'Contribution Received'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.drawer}>
-              <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
-              <View style={styles.drawerSection}>
-                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Contributions</Text>
-                <TouchableOpacity
-                  style={styles.drawerItem}
-                  activeOpacity={0.9}
-                  onPress={() => handleContributionPress('made')}
-                >
-                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
-                    {strings.contributions?.made ?? 'Contribution Made'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.drawerItem}
-                  activeOpacity={0.9}
-                  onPress={() => handleContributionPress('received')}
-                >
-                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
-                    {strings.contributions?.received ?? 'Contribution Received'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.drawerSection}>
-                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Levels</Text>
-                {levelOrder.map((level) => {
-                  const isActive = selectedLevel === level;
-                  return (
-                    <TouchableOpacity
-                      key={level}
-                      style={[styles.drawerItem, isActive && styles.drawerItemActive]}
-                      activeOpacity={0.9}
-                      onPress={() => handleLevelSelect(level)}
-                    >
-                      <Text
-                        style={[
-                          styles.drawerItemText,
-                          { fontFamily: typography.semibold },
-                          isActive && styles.drawerItemTextActive,
-                        ]}
+                <View style={styles.drawerSection}>
+                  <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Levels</Text>
+                  {levelOrder.map((level) => {
+                    const isActive = selectedLevel === level;
+                    return (
+                      <TouchableOpacity
+                        key={level}
+                        style={[styles.drawerItem, isActive && styles.drawerItemActive]}
+                        activeOpacity={0.9}
+                        onPress={() => handleLevelSelect(level)}
                       >
-                        {strings.ngo?.filters?.[level] ?? level}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                        <Text
+                          style={[
+                            styles.drawerItemText,
+                            { fontFamily: typography.semibold },
+                            isActive && styles.drawerItemTextActive,
+                          ]}
+                        >
+                          {strings.ngo?.filters?.[level] ?? level}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </Pressable>
+              <Pressable style={styles.scrim} onPress={() => setDrawerOpen(false)} />
             </View>
-          </Pressable>
+          </View>
         ) : null}
+
       </SafeAreaView>
     </LinearGradient>
   );
@@ -303,21 +309,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#fff',
   },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    paddingTop: Spacing.md,
-    paddingRight: Spacing.md,
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    zIndex: 10,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  drawerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingTop: Spacing.lg,
+    paddingLeft: Spacing.lg,
   },
   drawer: {
-    width: '72%',
-    maxWidth: 320,
+    width: '55%',
+    maxWidth: 360,
     backgroundColor: '#fff',
     borderRadius: Radius.xl,
     padding: Spacing.lg,
@@ -325,6 +334,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
+  },
+  scrim: {
+    flex: 1,
   },
   drawerTitle: {
     fontSize: 18,
