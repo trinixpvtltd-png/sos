@@ -1,0 +1,10 @@
+[build]
+  # Build a static web export of the Expo app
+  command = "npm ci && npx expo export --platform web --output-dir dist"
+  publish = "dist"
+
+# Ensure client-side routing (single-page app) falls back to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
