@@ -1,6 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import {
+  Animated,
+  Dimensions,
+  Easing,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useStrings } from '../localization/useStrings';
@@ -37,6 +48,8 @@ export const ResourcesScreen = () => {
   const typography = useTypography();
   const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerAnim] = useState(new Animated.Value(-Dimensions.get('window').width));
 
   const filteredResources = useMemo(() => {
     if (activeCategory === 'All') {
@@ -45,63 +58,111 @@ export const ResourcesScreen = () => {
     return resources.filter((item) => item.category === activeCategory);
   }, [activeCategory]);
 
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    Animated.timing(drawerAnim, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeDrawer = () => {
+    Animated.timing(drawerAnim, {
+      toValue: -Dimensions.get('window').width,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setDrawerOpen(false));
+  };
+
+  const handleCategorySelect = (category) => {
+    setActiveCategory(category);
+    closeDrawer();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipRow}
-      >
-        {categories.map((category) => {
-          const active = category === activeCategory;
-          return (
-            <TouchableOpacity
-              key={category}
-              style={[styles.chip, active && styles.chipActive]}
-              onPress={() => setActiveCategory(category)}
-            >
-              <Text
-                style={[
-                  styles.chipLabel,
-                  { fontFamily: typography.semibold },
-                  active && styles.chipLabelActive,
-                ]}
-              >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-      <View style={styles.quickRow}>
-        <TouchableOpacity
-          style={styles.quick}
-          onPress={() => navigation.navigate('ResourceTransparency')}
-          activeOpacity={0.9}
-        >
-          <Text style={[styles.quickLabel, { fontFamily: typography.semibold }]}>Resource Handle</Text>
+      <View style={styles.topRow}>
+        <TouchableOpacity style={styles.menuIcon} activeOpacity={0.9} onPress={openDrawer}>
+          <Text style={[styles.menuText, { fontFamily: typography.semibold }]}>{'\u2261'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quick}
-          onPress={() => navigation.navigate('AvailableService')}
-          activeOpacity={0.9}
-        >
-          <Text style={[styles.quickLabel, { fontFamily: typography.semibold }]}>Available Service</Text>
-        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>{strings.navigation.resources}</Text>
+        <View style={{ width: 48 }} />
       </View>
       <FlatList
         contentContainerStyle={styles.list}
         data={filteredResources}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={() => (
-          <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>
-            {strings.navigation.resources}
-          </Text>
-        )}
         renderItem={({ item }) => <ResourceCard item={item} typography={typography} />}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         showsVerticalScrollIndicator={false}
       />
+
+      {drawerOpen ? (
+        <View style={styles.overlay} pointerEvents="box-none">
+          <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
+          <View style={styles.drawerRow}>
+            <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
+              <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
+              <View style={styles.drawerSection}>
+                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Categories</Text>
+                {categories.map((category) => {
+                  const active = category === activeCategory;
+                  return (
+                    <TouchableOpacity
+                      key={category}
+                      style={[styles.drawerItem, active && styles.drawerItemActive]}
+                      activeOpacity={0.9}
+                      onPress={() => handleCategorySelect(category)}
+                    >
+                      <Text
+                        style={[
+                          styles.drawerItemText,
+                          { fontFamily: typography.semibold },
+                          active && styles.drawerItemTextActive,
+                        ]}
+                      >
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.drawerSection}>
+                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Quick Links</Text>
+                <TouchableOpacity
+                  style={styles.drawerItem}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    closeDrawer();
+                    navigation.navigate('ResourceTransparency');
+                  }}
+                >
+                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
+                    Resource Handle
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.drawerItem}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    closeDrawer();
+                    navigation.navigate('AvailableService');
+                  }}
+                >
+                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
+                    Available Service
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+            <Pressable style={styles.scrim} onPress={closeDrawer} />
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -111,54 +172,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
   },
-  chipRow: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  quickRow: {
+  topRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
-  quick: {
-    flex: 1,
-    backgroundColor: '#F2D9BB',
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
-  quickLabel: {
-    color: Colors.textPrimary,
-  },
-  chip: {
-    minWidth: 82,
-    minHeight: 36,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.lg,
-    backgroundColor: '#F7E9D8',
-    marginRight: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  menuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F4E7D8',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  chipLabel: {
-    fontSize: 14,
-    lineHeight: 18,
+  menuText: {
+    fontSize: 18,
     color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  chipLabelActive: {
-    color: '#fff',
   },
   list: {
     padding: Spacing.lg,
@@ -166,9 +198,8 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 22,
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
   },
   card: {
     padding: Spacing.lg,
@@ -232,5 +263,63 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: Spacing.xl,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    zIndex: 10,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  drawerRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  drawer: {
+    width: '65%',
+    maxWidth: 380,
+    backgroundColor: '#fff',
+    borderTopRightRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
+    padding: Spacing.lg,
+    shadowColor: Colors.shadow,
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  scrim: {
+    flex: 1,
+  },
+  drawerTitle: {
+    fontSize: 20,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  drawerSection: {
+    marginBottom: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  drawerLabel: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  drawerItem: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  drawerItemActive: {
+    backgroundColor: 'rgba(229,57,53,0.1)',
+  },
+  drawerItemText: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
+  drawerItemTextActive: {
+    color: Colors.primary,
   },
 });
