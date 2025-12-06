@@ -71,35 +71,6 @@ export const SocialScreen = () => {
         </View>
         <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.social?.title}</Text>
         <Text style={[styles.subtitle, { fontFamily: typography.regular }]}>{strings.social?.filterLabel}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipRow}
-          contentContainerStyle={{ gap: Spacing.sm }}
-        >
-          {SOCIAL_CATEGORIES.map((category) => {
-            const active = category === selectedCategory;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setSelectedCategory(category)}
-                activeOpacity={0.9}
-              >
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    { fontFamily: typography.semibold },
-                    active && styles.chipLabelActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
@@ -230,25 +201,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     color: Colors.textMuted,
     lineHeight: 20,
-  },
-  chipRow: {
-    marginVertical: Spacing.md,
-  },
-  chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  chipActive: {
-    backgroundColor: Colors.primary,
-  },
-  chipLabel: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-  },
-  chipLabelActive: {
-    color: '#fff',
   },
   emptyCard: {
     backgroundColor: '#fff',
