@@ -1,0 +1,38 @@
+export const resources = [
+  {
+    id: 'helpline-1',
+    category: 'Helpline',
+    title: 'National Women Helpline',
+    description: '24/7 multi-lingual command center for women safety incidents.',
+    contact: '181',
+    region: 'PAN India',
+    escalation: 'Direct escalation to district authorities',
+  },
+  {
+    id: 'shelter-1',
+    category: 'Shelter',
+    title: 'One Stop Crisis Centre',
+    description: 'Medical, legal and counselling aid with temporary shelter.',
+    contact: '+91 92880 11234',
+    region: 'Tier-1 Cities',
+    escalation: 'Coordinated with Women & Child Dept.',
+  },
+  {
+    id: 'legal-1',
+    category: 'Legal',
+    title: 'District Legal Services Authority',
+    description: 'Free legal aid with on-call paralegal volunteers.',
+    contact: 'legalservices.gov.in',
+    region: 'Every district HQ',
+    escalation: 'Case diary synced with eCourts portal.',
+  },
+  {
+    id: 'psy-1',
+    category: 'Psychosocial',
+    title: 'Tele-counselling Network',
+    description: 'Confidential trauma support with regional language counsellors.',
+    contact: '1800-233-3330',
+    region: 'National (virtual)',
+    escalation: 'Emergency connect to psychiatrists within 15 mins.',
+  },
+];
