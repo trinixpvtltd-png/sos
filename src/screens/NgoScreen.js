@@ -8,6 +8,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +34,7 @@ export const NgoScreen = () => {
   const typography = useTypography();
   const navigation = useNavigation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerAnim] = useState(new Animated.Value(-Dimensions.get('window').width));
   const [selectedLevel, setSelectedLevel] = useState(NGO_LEVELS.DISTRICT);
 
   const filteredNgos = useMemo(
@@ -48,6 +52,25 @@ export const NgoScreen = () => {
     setDrawerOpen(false);
   };
 
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    Animated.timing(drawerAnim, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeDrawer = () => {
+    Animated.timing(drawerAnim, {
+      toValue: -Dimensions.get('window').width,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setDrawerOpen(false));
+  };
+
   return (
     <LinearGradient colors={[Colors.surface, '#D5C1A4', '#CFB493']} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
@@ -59,7 +82,7 @@ export const NgoScreen = () => {
 
             activeOpacity={0.9}
 
-            onPress={() => setDrawerOpen(true)}
+            onPress={openDrawer}
 
           >
 
@@ -119,7 +142,9 @@ export const NgoScreen = () => {
           <View style={styles.overlay} pointerEvents="box-none">
             <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
             <View style={styles.drawerRow}>
-              <Pressable style={styles.drawer} onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}
+              >
                 <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
                 <View style={styles.drawerSection}>
                   <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Contributions</Text>
@@ -167,8 +192,8 @@ export const NgoScreen = () => {
                     );
                   })}
                 </View>
-              </Pressable>
-              <Pressable style={styles.scrim} onPress={() => setDrawerOpen(false)} />
+              </Animated.View>
+              <Pressable style={styles.scrim} onPress={closeDrawer} />
             </View>
           </View>
         ) : null}
@@ -322,13 +347,14 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     paddingTop: Spacing.lg,
-    paddingLeft: Spacing.lg,
+    paddingLeft: 0,
   },
   drawer: {
-    width: '55%',
-    maxWidth: 360,
+    width: '65%',
+    maxWidth: 380,
     backgroundColor: '#fff',
-    borderRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
     padding: Spacing.lg,
     shadowColor: Colors.shadow,
     shadowOpacity: 0.25,
