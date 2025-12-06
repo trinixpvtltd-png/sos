@@ -62,7 +62,7 @@ export const NgoScreen = () => {
 
           >
 
-            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>?</Text>
+            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>≡</Text>
 
           </TouchableOpacity>
 
@@ -164,7 +164,7 @@ export const NgoScreen = () => {
                   );
                 })}
               </View>
-            </Pressable>
+            </View>
           </Pressable>
         ) : null}
       </SafeAreaView>
