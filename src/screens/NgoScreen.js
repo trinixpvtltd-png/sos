@@ -1,5 +1,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { Colors, Gradients } from '../theme/colors';
@@ -19,6 +28,8 @@ const levelOrder = [
 export const NgoScreen = () => {
   const strings = useStrings();
   const typography = useTypography();
+  const navigation = useNavigation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(NGO_LEVELS.DISTRICT);
 
   const filteredNgos = useMemo(
@@ -26,51 +37,36 @@ export const NgoScreen = () => {
     [selectedLevel],
   );
 
+  const handleContributionPress = (mode) => {
+    setDrawerOpen(false);
+    navigation.navigate('ContributionDetail', { mode });
+  };
+
+  const handleLevelSelect = (level) => {
+    setSelectedLevel(level);
+    setDrawerOpen(false);
+  };
+
   return (
     <LinearGradient colors={[Colors.surface, '#D5C1A4', '#CFB493']} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerRow}>
-          <View style={styles.menuIcon}>
-            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>≡</Text>
-          </View>
-          <LanguageToggleChip />
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.menuIcon}
+            activeOpacity={0.9}
+            onPress={() => setDrawerOpen(true)}
+          >
+            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>?</Text>
+          </TouchableOpacity>
+          <LanguageToggleChip />
         </View>
         <View style={styles.titleBlock}>
           <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.ngo?.title}</Text>
           <Text style={[styles.subtitle, { fontFamily: typography.regular }]}>{strings.ngo?.subtitle}</Text>
         </View>
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterContent}
-        >
-          {levelOrder.map((level) => {
-            const isActive = selectedLevel === level;
-            return (
-              <TouchableOpacity
-                key={level}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
-                activeOpacity={0.9}
-                onPress={() => setSelectedLevel(level)}
-              >
-                <Text
-                  style={[
-                    styles.filterLabel,
-                    { fontFamily: typography.semibold },
-                    isActive && styles.filterLabelActive,
-                  ]}
-                >
-                  {strings.ngo?.filters?.[level] ?? level}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <ScrollView
           style={styles.list}
-          contentContainerStyle={{ paddingTop: Spacing.xs, paddingBottom: Spacing.xl }}
+          contentContainerStyle={{ paddingTop: Spacing.sm, paddingBottom: Spacing.xl }}
           showsVerticalScrollIndicator={false}
         >
           {filteredNgos.map((ngo) => (
@@ -108,6 +104,59 @@ export const NgoScreen = () => {
             </View>
           ))}
         </ScrollView>
+        {drawerOpen ? (
+          <Pressable style={styles.backdrop} onPress={() => setDrawerOpen(false)}>
+            <Pressable style={styles.drawer} onPress={(e) => e.stopPropagation()}>
+              <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
+              <View style={styles.drawerSection}>
+                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Contributions</Text>
+                <TouchableOpacity
+                  style={styles.drawerItem}
+                  activeOpacity={0.9}
+                  onPress={() => handleContributionPress('made')}
+                >
+                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
+                    {strings.contributions?.made ?? 'Contribution Made'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.drawerItem}
+                  activeOpacity={0.9}
+                  onPress={() => handleContributionPress('received')}
+                >
+                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
+                    {strings.contributions?.received ?? 'Contribution Received'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.drawerSection}>
+                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Levels</Text>
+                {levelOrder.map((level) => {
+                  const isActive = selectedLevel === level;
+                  return (
+                    <TouchableOpacity
+                      key={level}
+                      style={[styles.drawerItem, isActive && styles.drawerItemActive]}
+                      activeOpacity={0.9}
+                      onPress={() => handleLevelSelect(level)}
+                    >
+                      <Text
+                        style={[
+                          styles.drawerItemText,
+                          { fontFamily: typography.semibold },
+                          isActive && styles.drawerItemTextActive,
+                        ]}
+                      >
+                        {strings.ngo?.filters?.[level] ?? level}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </Pressable>
+          </Pressable>
+        ) : null}
       </SafeAreaView>
     </LinearGradient>
   );
@@ -157,39 +206,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: Colors.textMuted,
   },
-  filterRow: {
-    marginBottom: 0,
-  },
-  filterContent: {
-    gap: Spacing.xs,
-    paddingVertical: 0,
-    alignItems: 'center',
-  },
-  filterChip: {
-    minHeight: 32,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs / 2,
-    borderRadius: Radius.md,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterLabel: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  filterLabelActive: {
-    color: '#fff',
-  },
   list: {
     flex: 1,
-    marginTop: -Spacing.xl * 1.6,
+    marginTop: 0,
   },
   card: {
     backgroundColor: '#fff',
@@ -273,5 +292,59 @@ const styles = StyleSheet.create({
   donateLabel: {
     fontSize: 14,
     color: '#fff',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: Spacing.md,
+    paddingRight: Spacing.md,
+  },
+  drawer: {
+    width: '72%',
+    maxWidth: 320,
+    backgroundColor: '#fff',
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    shadowColor: Colors.shadow,
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    shadowOffset: { width: -2, height: 6 },
+  },
+  drawerTitle: {
+    fontSize: 18,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  drawerSection: {
+    marginBottom: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  drawerLabel: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  drawerItem: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  drawerItemActive: {
+    backgroundColor: 'rgba(229,57,53,0.1)',
+  },
+  drawerItemText: {
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
+  drawerItemTextActive: {
+    color: Colors.primary,
   },
 });

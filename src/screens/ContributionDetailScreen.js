@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../theme/colors';
@@ -15,7 +16,15 @@ const CONTRIBUTIONS = [
 export const ContributionDetailScreen = () => {
   const typography = useTypography();
   const strings = useStrings();
-  const [mode, setMode] = useState('made');
+  const route = useRoute();
+  const initialMode = route.params?.mode ?? 'made';
+  const [mode, setMode] = useState(initialMode);
+
+  useEffect(() => {
+    if (route.params?.mode && route.params.mode !== mode) {
+      setMode(route.params.mode);
+    }
+  }, [route.params?.mode]);
 
   const items = useMemo(() => CONTRIBUTIONS.filter((c) => c.mode === mode), [mode]);
 
