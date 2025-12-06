@@ -50,15 +50,24 @@ export const NgoScreen = () => {
   return (
     <LinearGradient colors={[Colors.surface, '#D5C1A4', '#CFB493']} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.menuIcon}
-            activeOpacity={0.9}
-            onPress={() => setDrawerOpen(true)}
-          >
-            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>?</Text>
-          </TouchableOpacity>
-          <LanguageToggleChip />
+        <View style={styles.headerRow}>
+
+          <TouchableOpacity
+
+            style={styles.menuIcon}
+
+            activeOpacity={0.9}
+
+            onPress={() => setDrawerOpen(true)}
+
+          >
+
+            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>?</Text>
+
+          </TouchableOpacity>
+
+          <LanguageToggleChip />
+
         </View>
         <View style={styles.titleBlock}>
           <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.ngo?.title}</Text>
@@ -106,7 +115,8 @@ export const NgoScreen = () => {
         </ScrollView>
         {drawerOpen ? (
           <Pressable style={styles.backdrop} onPress={() => setDrawerOpen(false)}>
-            <Pressable style={styles.drawer} onPress={(e) => e.stopPropagation()}>
+
+            <View style={styles.drawer}>
               <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
               <View style={styles.drawerSection}>
                 <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Contributions</Text>
@@ -314,7 +324,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.shadow,
     shadowOpacity: 0.25,
     shadowRadius: 14,
-    shadowOffset: { width: -2, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
   },
   drawerTitle: {
     fontSize: 18,
