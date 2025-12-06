@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import {
   FlatList,
   Image,
@@ -8,6 +9,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
+  Easing,
+  Dimensions,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
@@ -21,6 +26,33 @@ export const SocialScreen = () => {
   const typography = useTypography();
   const strings = useStrings();
   const [selectedCategory, setSelectedCategory] = useState(SOCIAL_CATEGORIES[0]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerAnim] = useState(new Animated.Value(-Dimensions.get('window').width));
+
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    Animated.timing(drawerAnim, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeDrawer = () => {
+    Animated.timing(drawerAnim, {
+      toValue: -Dimensions.get('window').width,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setDrawerOpen(false));
+  };
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+    closeDrawer();
+  };
+
 
   const posts = useMemo(() => {
     return socialPosts.filter((post) =>
@@ -32,9 +64,9 @@ export const SocialScreen = () => {
     <LinearGradient colors={['#E5D3C0', '#D0BA9F', '#C5AB8D']} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topRow}>
-          <View style={styles.menuIcon}>
-            <Text style={[styles.menuText, { fontFamily: typography.semibold }]}>≡</Text>
-          </View>
+          <TouchableOpacity style={styles.menuIcon} activeOpacity={0.9} onPress={openDrawer}>
+            <Text style={[styles.menuText, { fontFamily: typography.semibold }]}>{'\u2261'}</Text>
+          </TouchableOpacity>
           <LanguageToggleChip />
         </View>
         <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.social?.title}</Text>
@@ -85,6 +117,43 @@ export const SocialScreen = () => {
           )}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.lg }} />}
         />
+
+        {drawerOpen ? (
+          <View style={styles.overlay} pointerEvents="box-none">
+            <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
+            <View style={styles.drawerRow}>
+              <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
+                <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
+                <View style={styles.drawerSection}>
+                  <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Categories</Text>
+                  {SOCIAL_CATEGORIES.map((category) => {
+                    const active = category === selectedCategory;
+                    return (
+                      <TouchableOpacity
+                        key={category}
+                        style={[styles.drawerItem, active && styles.drawerItemActive]}
+                        activeOpacity={0.9}
+                        onPress={() => handleCategorySelect(category)}
+                      >
+                        <Text
+                          style={[
+                            styles.drawerItemText,
+                            { fontFamily: typography.semibold },
+                            active && styles.drawerItemTextActive,
+                          ]}
+                        >
+                          {category}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+              <Pressable style={styles.scrim} onPress={closeDrawer} />
+            </View>
+          </View>
+        ) : null}
+
       </SafeAreaView>
     </LinearGradient>
   );
@@ -278,5 +347,63 @@ const styles = StyleSheet.create({
   donateLabel: {
     color: '#fff',
     fontSize: 14,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    zIndex: 10,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  drawerRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  drawer: {
+    width: '65%',
+    maxWidth: 380,
+    backgroundColor: '#fff',
+    borderTopRightRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
+    padding: Spacing.lg,
+    shadowColor: Colors.shadow,
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  scrim: {
+    flex: 1,
+  },
+  drawerTitle: {
+    fontSize: 22,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  drawerSection: {
+    marginBottom: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  drawerLabel: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  drawerItem: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  drawerItemActive: {
+    backgroundColor: 'rgba(229,57,53,0.1)',
+  },
+  drawerItemText: {
+    fontSize: 16,
+    color: Colors.textPrimary,
+  },
+  drawerItemTextActive: {
+    color: Colors.primary,
   },
 });
