@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing } from '../theme/metrics';
 import { useStrings } from '../localization/useStrings';
 import { useTypography } from '../theme/typography';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export const RevelationScreen = () => {
   const strings = useStrings();
@@ -15,104 +16,202 @@ export const RevelationScreen = () => {
   const [details, setDetails] = useState('');
 
   const onSubmit = () => {
-    setDetails('');
-    navigation.navigate('Confirmation');
+    if (details.trim()) {
+      navigation.navigate('Confirmation');
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.revelationTitle}</Text>
-      <TextInput
-        style={[styles.input, { fontFamily: typography.regular }]}
-        multiline
-        placeholder={strings.revelationPlaceholder}
-        placeholderTextColor={Colors.textMuted}
-        value={details}
-        onChangeText={setDetails}
-      />
-      <Text style={[styles.hint, { fontFamily: typography.regular }]}>{strings.revelationHint}</Text>
-      <View style={styles.attachmentRow}>
-        {[
-          { icon: 'mic', label: 'Voice' },
-          { icon: 'camera', label: 'Camera' },
-          { icon: 'image', label: 'Gallery' },
-        ].map((item) => (
-          <TouchableOpacity key={item.icon} style={styles.attachmentButton}>
-            <Feather name={item.icon} size={18} color={Colors.primary} />
-            <Text style={[styles.attachmentLabel, { fontFamily: typography.semibold }]}>
-              {item.label}
-            </Text>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>Media Report</Text>
+            <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Broadcast emergency updates</Text>
+          </View>
+          <View style={{ width: 44 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.inputCard}>
+            <Text style={[styles.inputLabel, { fontFamily: typography.semibold }]}>Incident Details</Text>
+            <TextInput
+              style={[styles.input, { fontFamily: typography.regular }]}
+              multiline
+              placeholder="Describe the situation in detail..."
+              placeholderTextColor={Colors.textMuted}
+              value={details}
+              onChangeText={setDetails}
+              blurOnSubmit={false}
+            />
+            <View style={styles.charCount}>
+              <Text style={[styles.charText, { fontFamily: typography.regular }]}>{details.length} characters</Text>
+            </View>
+          </View>
+
+          <Text style={[styles.sectionTitle, { fontFamily: typography.bold }]}>Attach Evidence</Text>
+          <View style={styles.attachmentGrid}>
+            {[
+              { icon: 'mic', label: 'Voice Record', color: '#5856D6' },
+              { icon: 'camera', label: 'Take Photo', color: '#FF9500' },
+              { icon: 'image', label: 'Use Gallery', color: '#32D74B' },
+              { icon: 'video', label: 'Record Video', color: '#FF3B30' },
+            ].map((item) => (
+              <TouchableOpacity key={item.icon} style={styles.attachmentItem} activeOpacity={0.7}>
+                <View style={[styles.iconBox, { backgroundColor: item.color + '15' }]}>
+                  <Feather name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={[styles.attachmentLabel, { fontFamily: typography.semibold }]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitBtn, !details.trim() && styles.submitBtnDisabled]}
+            onPress={onSubmit}
+            disabled={!details.trim()}
+          >
+            <Text style={[styles.submitLabel, { fontFamily: typography.bold }]}>Submit Report</Text>
           </TouchableOpacity>
-        ))}
-      </View>
-      <TouchableOpacity style={styles.button} onPress={onSubmit}>
-        <Text style={[styles.buttonLabel, { fontFamily: typography.semibold }]}>
-          {strings.revelationSubmit}
-        </Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface,
-    padding: Spacing.lg,
+    backgroundColor: Colors.background,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+  safeArea: {
+    flex: 1,
   },
-  input: {
-    minHeight: 180,
-    borderRadius: Radius.lg,
-    backgroundColor: '#fff',
-    padding: Spacing.md,
-    fontSize: 16,
-    textAlignVertical: 'top',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  hint: {
-    marginTop: Spacing.sm,
-    color: Colors.textMuted,
-    fontSize: 14,
-  },
-  attachmentRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: Spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingTop: 30,
   },
-  attachmentButton: {
-    flex: 1,
+  backBtn: {
+    display: 'none',
+  },
+  headerTitle: {
+    fontSize: 26,
+    color: Colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginTop: -2,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 100,
+  },
+  inputCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+  },
+  input: {
+    fontSize: 16,
+    color: Colors.textPrimary,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    outlineStyle: 'none',
+  },
+  charCount: {
+    alignItems: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: '#F2F2F7',
+  },
+  charText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    color: Colors.textPrimary,
+    marginTop: 30,
+    marginBottom: 16,
+  },
+  attachmentGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  attachmentItem: {
+    width: '48%',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.sm,
-    marginHorizontal: Spacing.xs,
-    borderRadius: Radius.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: '#fff',
+    borderColor: '#F2F2F7',
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   attachmentLabel: {
     fontSize: 13,
     color: Colors.textPrimary,
   },
-  button: {
-    marginTop: Spacing.lg,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.md,
+  tipBox: {
+    flexDirection: 'row',
+    backgroundColor: Colors.primary + '08',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 15,
+    gap: 12,
     alignItems: 'center',
   },
-  buttonLabel: {
+  tipText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  submitBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 30,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitLabel: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
   },
 });
+

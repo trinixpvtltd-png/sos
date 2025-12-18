@@ -8,10 +8,23 @@ Expo-powered port of the SOS Flutter application, featuring bilingual command ce
 - iOS Simulator, Android Emulator, or Expo Go on a physical device
 
 ## Getting started
-```powershell
-cd "C:\Users\Gaurav Gupta\Desktop\SOS\experiment app\sos_app_rn"
+```bash
 npm install
 npm run start
+```
+
+Run a specific platform:
+
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+If Metro caches stale assets:
+
+```bash
+npm run start:clear
 ```
 
 When the Metro bundler starts, scan the QR code with Expo Go (mobile) or press `a` / `i` to launch the Android/iOS simulator.
@@ -28,5 +41,5 @@ When the Metro bundler starts, scan the QR code with Expo Go (mobile) or press `
 - Typography auto-switches between Poppins (EN) and Noto Sans Devanagari (HI) using `src/theme/typography.js`.
 
 ## Troubleshooting
-- Run `npx expo-doctor` to validate dependencies.
-- If Metro caches stale assets, restart with `npm run start -- --clear`. Use `Ctrl+C` to stop the dev server.
+- Run `npm run doctor` to validate dependencies.
+- Use `Ctrl+C` to stop the dev server.

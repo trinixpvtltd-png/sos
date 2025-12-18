@@ -24,6 +24,7 @@ export default function App() {
     Poppins_700Bold,
     NotoSansDevanagari_400Regular,
     NotoSansDevanagari_600SemiBold,
+    saman: require('./assets/saman.ttf'),
   });
 
   if (!fontsLoaded) {

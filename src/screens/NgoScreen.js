@@ -1,26 +1,23 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import {
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Animated,
-  Easing,
-  Dimensions,
+  FlatList,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMemo, useState } from 'react';
-import { Colors, Gradients } from '../theme/colors';
+import { useMemo, useState, useCallback } from 'react';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Colors } from '../theme/colors';
 import { Radius, Spacing } from '../theme/metrics';
-import { LanguageToggleChip } from '../components/LanguageToggleChip';
 import { useStrings } from '../localization/useStrings';
 import { useTypography } from '../theme/typography';
 import { NGO_LEVELS, ngos } from '../data/ngos';
+import { SearchFilterBar } from '../components/SearchFilterBar';
 
 const levelOrder = [
   NGO_LEVELS.DISTRICT,
@@ -29,370 +26,264 @@ const levelOrder = [
   NGO_LEVELS.GLOBAL,
 ];
 
+const NgoCard = ({ ngo, typography, strings }) => (
+  <View style={styles.card}>
+    <Image source={{ uri: ngo.imageUrl }} style={styles.cardImage} />
+    <View style={styles.cardBadge}>
+      <Text style={[styles.cardBadgeText, { fontFamily: typography.bold }]}>{ngo.level.toUpperCase()}</Text>
+    </View>
+    <View style={styles.cardBody}>
+      <View style={styles.cardHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.cardTitle, { fontFamily: typography.bold }]}>{ngo.name}</Text>
+          <Text style={[styles.cardCategory, { fontFamily: typography.regular }]}>{ngo.category}</Text>
+        </View>
+      </View>
+
+      <Text style={[styles.cardDesc, { fontFamily: typography.regular }]} numberOfLines={2}>
+        {ngo.description}
+      </Text>
+
+      <View style={styles.progressSection}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${Math.min(ngo.progress * 100, 100)}%` }]} />
+        </View>
+        <View style={styles.progressInfo}>
+          <Text style={[styles.progressText, { fontFamily: typography.semibold }]}>
+            ₹{ngo.raisedAmount.toLocaleString()} of ₹{ngo.goalAmount.toLocaleString()}
+          </Text>
+          <Text style={[styles.progressPercent, { fontFamily: typography.bold }]}>
+            {Math.round(ngo.progress * 100)}%
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
+        <Text style={[styles.actionBtnText, { fontFamily: typography.bold }]}>View details</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
 export const NgoScreen = () => {
   const strings = useStrings();
   const typography = useTypography();
   const navigation = useNavigation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerAnim] = useState(new Animated.Value(-Dimensions.get('window').width));
-  const [selectedLevel, setSelectedLevel] = useState(NGO_LEVELS.DISTRICT);
+  const [selectedLevel, setSelectedLevel] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredNgos = useMemo(
-    () => ngos.filter((ngo) => ngo.level === selectedLevel),
-    [selectedLevel],
+  useFocusEffect(
+    useCallback(() => {
+      // Reset filters when screen comes into focus
+      setSelectedLevel('All');
+      setSearchQuery('');
+    }, [])
   );
 
-  const handleContributionPress = (mode) => {
-    setDrawerOpen(false);
-    navigation.navigate('ContributionDetail', { mode });
-  };
-
-  const handleLevelSelect = (level) => {
-    setSelectedLevel(level);
-    setDrawerOpen(false);
-  };
-
-  const openDrawer = () => {
-    setDrawerOpen(true);
-    Animated.timing(drawerAnim, {
-      toValue: 0,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeDrawer = () => {
-    Animated.timing(drawerAnim, {
-      toValue: -Dimensions.get('window').width,
-      duration: 200,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => setDrawerOpen(false));
-  };
+  const filteredNgos = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return ngos.filter((ngo) => {
+      const matchesLevel = selectedLevel === 'All' || ngo.level === selectedLevel;
+      if (!q) return matchesLevel;
+      const haystack = `${ngo.name} ${ngo.category} ${ngo.description}`.toLowerCase();
+      return matchesLevel && haystack.includes(q);
+    });
+  }, [selectedLevel, searchQuery]);
 
   return (
-    <LinearGradient colors={[Colors.surface, '#D5C1A4', '#CFB493']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerRow}>
-
-          <TouchableOpacity
-
-            style={styles.menuIcon}
-
-            activeOpacity={0.9}
-
-            onPress={openDrawer}
-
-          >
-
-            <Text style={[styles.menuLabel, { fontFamily: typography.semibold }]}>≡</Text>
-
-          </TouchableOpacity>
-
-          <LanguageToggleChip />
-
-        </View>
-        <View style={styles.titleBlock}>
-          <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.ngo?.title}</Text>
-          <Text style={[styles.subtitle, { fontFamily: typography.regular }]}>{strings.ngo?.subtitle}</Text>
-        </View>
-        <ScrollView
-          style={styles.list}
-          contentContainerStyle={{ paddingTop: Spacing.sm, paddingBottom: Spacing.xl }}
-          showsVerticalScrollIndicator={false}
-        >
-          {filteredNgos.map((ngo) => (
-            <View key={ngo.id} style={styles.card}>
-              <Image source={{ uri: ngo.imageUrl }} style={styles.cardImage} />
-              <View style={styles.cardBody}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.cardTitle, { fontFamily: typography.bold }]}>{ngo.name}</Text>
-                    <Text style={[styles.cardCategory, { fontFamily: typography.regular }]}>{ngo.category}</Text>
-                  </View>
-                  <View style={styles.levelPill}>
-                    <Text style={[styles.levelLabel, { fontFamily: typography.semibold }]}>
-                      {(ngo.level ?? '').toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.cardDescription, { fontFamily: typography.regular }]}>{ngo.description}</Text>
-                <Text style={[styles.cardLocation, { fontFamily: typography.regular }]}>{ngo.location}</Text>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${Math.min(ngo.progress * 100, 100)}%` }]} />
-                </View>
-                <View style={styles.cardFooter}>
-                  <Text style={[styles.raised, { fontFamily: typography.semibold }]}>
-                    {strings.ngo?.raisedLabel?.(
-                      ngo.raisedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
-                      ngo.goalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
-                    )}
-                  </Text>
-                  <TouchableOpacity style={styles.donateButton}>
-                    <Text style={[styles.donateLabel, { fontFamily: typography.semibold }]}>Act</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-        
-        {drawerOpen ? (
-          <View style={styles.overlay} pointerEvents="box-none">
-            <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
-            <View style={styles.drawerRow}>
-              <Animated.View
-                style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}
-              >
-                <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
-                <View style={styles.drawerSection}>
-                  <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Contributions</Text>
-                  <TouchableOpacity
-                    style={styles.drawerItem}
-                    activeOpacity={0.9}
-                    onPress={() => handleContributionPress('made')}
-                  >
-                    <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
-                      {strings.contributions?.made ?? 'Contribution Made'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.drawerItem}
-                    activeOpacity={0.9}
-                    onPress={() => handleContributionPress('received')}
-                  >
-                    <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
-                      {strings.contributions?.received ?? 'Contribution Received'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.drawerSection}>
-                  <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Levels</Text>
-                  {levelOrder.map((level) => {
-                    const isActive = selectedLevel === level;
-                    return (
-                      <TouchableOpacity
-                        key={level}
-                        style={[styles.drawerItem, isActive && styles.drawerItemActive]}
-                        activeOpacity={0.9}
-                        onPress={() => handleLevelSelect(level)}
-                      >
-                        <Text
-                          style={[
-                            styles.drawerItemText,
-                            { fontFamily: typography.semibold },
-                            isActive && styles.drawerItemTextActive,
-                          ]}
-                        >
-                          {strings.ngo?.filters?.[level] ?? level}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </Animated.View>
-              <Pressable style={styles.scrim} onPress={closeDrawer} />
-            </View>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>NGO Partners</Text>
+            <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Collaborate for impact</Text>
           </View>
-        ) : null}
+          <TouchableOpacity
+            style={styles.historyBtn}
+            onPress={() => navigation.navigate('Profile', { screen: 'ProfileContribDetail', params: { mode: 'made' } })}
+          >
+            <Feather name="clock" size={20} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
 
+        <SearchFilterBar
+          searchValue={searchQuery}
+          onChangeSearch={setSearchQuery}
+          searchPlaceholder="Search NGOs..."
+          filters={['All', ...levelOrder.map((level) => ({
+            key: level,
+            label: level.charAt(0).toUpperCase() + level.slice(1),
+          }))]}
+          selectedFilter={selectedLevel}
+          onSelectFilter={setSelectedLevel}
+        />
+
+        {/* List */}
+        <FlatList
+          data={filteredNgos}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <NgoCard ngo={item} typography={typography} strings={strings} />
+          )}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="heart-broken-outline" size={64} color={Colors.textSecondary} />
+              <Text style={[styles.emptyText, { fontFamily: typography.semibold }]}>No NGO partners in this level</Text>
+            </View>
+          )}
+        />
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
+    backgroundColor: Colors.background,
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 0,
   },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 0,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingTop: 30,
   },
-  menuIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+  headerTitle: {
+    fontSize: 26,
+    color: Colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginTop: -2,
+  },
+  historyBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.18,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
   },
-  menuLabel: {
-    fontSize: 18,
-    color: Colors.textPrimary,
-  },
-  titleBlock: {
-    marginBottom: 0,
-  },
-  title: {
-    fontSize: 28,
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    marginTop: Spacing.xs,
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.textMuted,
-  },
-  list: {
-    flex: 1,
-    marginTop: 0,
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 100,
+    paddingTop: Spacing.sm,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: Radius.xl,
-    marginBottom: Spacing.xs,
+    marginBottom: 20,
     overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   cardImage: {
     width: '100%',
-    height: 130,
+    height: 180,
+    resizeMode: 'cover',
+  },
+  cardBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  cardBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    letterSpacing: 1,
   },
   cardBody: {
-    padding: Spacing.sm,
+    padding: 16,
   },
   cardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
-    gap: Spacing.sm,
+    marginBottom: 12,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     color: Colors.textPrimary,
   },
   cardCategory: {
-    fontSize: 14,
-    color: Colors.textMuted,
-  },
-  levelPill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.md,
-    backgroundColor: 'rgba(229,57,53,0.12)',
-  },
-  levelLabel: {
-    fontSize: 12,
-    color: Colors.primary,
-  },
-  cardDescription: {
-    marginTop: Spacing.sm,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    lineHeight: 20,
-  },
-  cardLocation: {
-    marginTop: Spacing.sm,
-    color: Colors.textMuted,
     fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  cardDesc: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  progressSection: {
+    marginBottom: 20,
   },
   progressTrack: {
-    height: 10,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceElevated,
-    marginTop: Spacing.md,
+    height: 8,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 4,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.success,
+    borderRadius: 4,
   },
-  cardFooter: {
-    marginTop: Spacing.md,
+  progressInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  raised: {
+  progressText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  progressPercent: {
+    fontSize: 12,
+    color: Colors.success,
+  },
+  actionBtn: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  actionBtnText: {
+    color: Colors.textPrimary,
     fontSize: 14,
-    color: Colors.textPrimary,
   },
-  donateButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.lg,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
   },
-  donateLabel: {
-    fontSize: 14,
-    color: '#fff',
-  },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    zIndex: 10,
-  },
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  drawerRow: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingTop: Spacing.lg,
-    paddingLeft: 0,
-  },
-  drawer: {
-    width: '65%',
-    maxWidth: 380,
-    backgroundColor: '#fff',
-    borderTopRightRadius: Radius.xl,
-    borderBottomRightRadius: Radius.xl,
-    padding: Spacing.lg,
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  scrim: {
-    flex: 1,
-  },
-  drawerTitle: {
-    fontSize: 18,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  drawerSection: {
-    marginBottom: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  drawerLabel: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  drawerItem: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-  },
-  drawerItemActive: {
-    backgroundColor: 'rgba(229,57,53,0.1)',
-  },
-  drawerItemText: {
-    fontSize: 15,
-    color: Colors.textPrimary,
-  },
-  drawerItemTextActive: {
-    color: Colors.primary,
+  emptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
 });
+

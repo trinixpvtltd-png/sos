@@ -20,13 +20,16 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.trinix.sos_app_rn"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-router"
-    ]
+    "extra": {
+      "eas": {
+        "projectId": "9ab2f409-87ea-42c8-a641-0b25859ec595"
+      }
+    }
   }
 }

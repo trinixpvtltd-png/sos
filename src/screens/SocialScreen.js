@@ -1,361 +1,313 @@
-import { useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { BlurView } from 'expo-blur';
 import {
   FlatList,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   Animated,
   Easing,
-  Dimensions,
   Pressable,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing } from '../theme/metrics';
-import { LanguageToggleChip } from '../components/LanguageToggleChip';
 import { useTypography } from '../theme/typography';
 import { useStrings } from '../localization/useStrings';
 import { SOCIAL_CATEGORIES, socialPosts } from '../data/socialPosts';
+import { SearchFilterBar } from '../components/SearchFilterBar';
+
+const SocialCard = ({ post, typography, strings }) => (
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <View style={styles.authorInfo}>
+        <View style={styles.authorAvatar}>
+          <Text style={[styles.avatarText, { fontFamily: typography.bold }]}>{post.author[0]}</Text>
+        </View>
+        <View>
+          <Text style={[styles.cardAuthor, { fontFamily: typography.bold }]}>{post.author}</Text>
+          <Text style={[styles.cardLocation, { fontFamily: typography.regular }]}>
+            <Feather name="map-pin" size={10} color={Colors.textSecondary} /> {post.location}
+          </Text>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.moreBtn}>
+        <Feather name="more-horizontal" size={20} color={Colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+
+    <Image source={{ uri: post.imageUrl }} style={styles.cardImage} />
+
+    <View style={styles.cardContent}>
+      <Text style={[styles.cardBodyText, { fontFamily: typography.regular }]}>{post.body}</Text>
+
+      <View style={styles.donationSection}>
+        <View style={styles.progressHeader}>
+          <Text style={[styles.progressLabel, { fontFamily: typography.semibold }]}>Goal Progress</Text>
+          <Text style={[styles.progressPercent, { fontFamily: typography.bold }]}>{Math.round(post.progress * 100)}%</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${Math.min(post.progress * 100, 100)}%` }]} />
+        </View>
+        <View style={styles.progressFooter}>
+          <Text style={[styles.raisedText, { fontFamily: typography.semibold }]}>
+            ₹{post.raised.toLocaleString('en-IN')} Raised
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.donateBtn} activeOpacity={0.8}>
+        <Text style={[styles.donateBtnText, { fontFamily: typography.bold }]}>Support Cause</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
 
 export const SocialScreen = () => {
   const typography = useTypography();
   const strings = useStrings();
   const [selectedCategory, setSelectedCategory] = useState(SOCIAL_CATEGORIES[0]);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerAnim] = useState(new Animated.Value(-Dimensions.get('window').width));
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const openDrawer = () => {
-    setDrawerOpen(true);
-    Animated.timing(drawerAnim, {
-      toValue: 0,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeDrawer = () => {
-    Animated.timing(drawerAnim, {
-      toValue: -Dimensions.get('window').width,
-      duration: 200,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => setDrawerOpen(false));
-  };
-
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
-    closeDrawer();
-  };
-
+  useFocusEffect(
+    useCallback(() => {
+      // Reset filters when screen comes into focus
+      setSelectedCategory('All');
+      setSearchQuery('');
+    }, [])
+  );
 
   const posts = useMemo(() => {
-    return socialPosts.filter((post) =>
-      selectedCategory ? post.category === selectedCategory : true,
-    );
-  }, [selectedCategory]);
+    const q = searchQuery.trim().toLowerCase();
+    return socialPosts.filter((post) => {
+      const matchesCategory =
+        selectedCategory && selectedCategory !== 'All' ? post.category === selectedCategory : true;
+      if (!q) return matchesCategory;
+      const haystack = `${post.author} ${post.location} ${post.body}`.toLowerCase();
+      return matchesCategory && haystack.includes(q);
+    });
+  }, [selectedCategory, searchQuery]);
+
+  const categoriesWithAll = ['All', ...SOCIAL_CATEGORIES.filter(c => c !== 'All')];
 
   return (
-    <LinearGradient colors={['#E5D3C0', '#D0BA9F', '#C5AB8D']} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.topRow}>
-          <TouchableOpacity style={styles.menuIcon} activeOpacity={0.9} onPress={openDrawer}>
-            <Text style={[styles.menuText, { fontFamily: typography.semibold }]}>{'\u2261'}</Text>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>Social Feed</Text>
+            <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Support local initiatives</Text>
+          </View>
+          <TouchableOpacity style={styles.notificationBtn}>
+            <Feather name="bell" size={22} color={Colors.textPrimary} />
+            <View style={styles.notifDot} />
           </TouchableOpacity>
-          <LanguageToggleChip />
         </View>
-        <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.social?.title}</Text>
-        <Text style={[styles.subtitle, { fontFamily: typography.regular }]}>{strings.social?.filterLabel}</Text>
+
+        <SearchFilterBar
+          searchValue={searchQuery}
+          onChangeSearch={setSearchQuery}
+          searchPlaceholder="Search posts..."
+          filters={categoriesWithAll.map((c) => ({ key: c, label: c }))}
+          selectedFilter={selectedCategory}
+          onSelectFilter={setSelectedCategory}
+        />
+
+        {/* Feed */}
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: Spacing.xl }}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <SocialCard post={item} typography={typography} strings={strings} />
           )}
           ListEmptyComponent={() => (
-            <View style={styles.emptyCard}>
-              <Text style={[styles.emptyText, { fontFamily: typography.semibold }]}>
-                No posts available
-              </Text>
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="post-outline" size={64} color={Colors.textSecondary} />
+              <Text style={[styles.emptyText, { fontFamily: typography.semibold }]}>No stories found</Text>
             </View>
           )}
-          ItemSeparatorComponent={() => <View style={{ height: Spacing.lg }} />}
         />
-
-        {drawerOpen ? (
-          <View style={styles.overlay} pointerEvents="box-none">
-            <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
-            <View style={styles.drawerRow}>
-              <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
-                <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
-                <View style={styles.drawerSection}>
-                  <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Categories</Text>
-                  {SOCIAL_CATEGORIES.map((category) => {
-                    const active = category === selectedCategory;
-                    return (
-                      <TouchableOpacity
-                        key={category}
-                        style={[styles.drawerItem, active && styles.drawerItemActive]}
-                        activeOpacity={0.9}
-                        onPress={() => handleCategorySelect(category)}
-                      >
-                        <Text
-                          style={[
-                            styles.drawerItemText,
-                            { fontFamily: typography.semibold },
-                            active && styles.drawerItemTextActive,
-                          ]}
-                        >
-                          {category}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </Animated.View>
-              <Pressable style={styles.scrim} onPress={closeDrawer} />
-            </View>
-          </View>
-        ) : null}
-
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 };
 
-const SocialCard = ({ post, typography, strings }) => (
-  <View style={styles.card}>
-    <Image source={{ uri: post.imageUrl }} style={styles.cardImage} />
-    <View style={styles.cardBody}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.cardAuthor, { fontFamily: typography.bold }]}>
-            {post.author} <Text style={styles.cardHandle}>{post.handle}</Text>
-          </Text>
-          <Text style={[styles.cardLocation, { fontFamily: typography.regular }]}>{post.location}</Text>
-        </View>
-        <TouchableOpacity style={styles.shareButton}>
-          <Text style={[styles.shareLabel, { fontFamily: typography.semibold }]}>↗</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={[styles.cardBodyText, { fontFamily: typography.regular }]}>{post.body}</Text>
-      <Text style={[styles.timestamp, { fontFamily: typography.regular }]}>
-        {new Date(post.timestamp).toLocaleString()}
-      </Text>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${Math.min(post.progress * 100, 100)}%` }]} />
-      </View>
-      <View style={styles.cardFooter}>
-        <Text style={[styles.progressCopy, { fontFamily: typography.semibold }]}>
-          ₹{post.raised.toLocaleString('en-IN', { maximumFractionDigits: 0 })}{' '}
-          {strings.social?.progressLabel}
-        </Text>
-        <TouchableOpacity style={styles.donateButton} activeOpacity={0.9}>
-          <Text style={[styles.donateLabel, { fontFamily: typography.semibold }]}>
-            {strings.social?.donate}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-);
-
 const styles = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
+    backgroundColor: Colors.background,
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
   },
-  topRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingTop: 30,
   },
-  menuIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+  headerTitle: {
+    fontSize: 26,
+    color: Colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginTop: -2,
+  },
+  notificationBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
-  menuText: {
-    fontSize: 18,
-    color: Colors.textPrimary,
+  notifDot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
-  title: {
-    fontSize: 28,
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    marginTop: Spacing.xs,
-    color: Colors.textMuted,
-    lineHeight: 20,
-  },
-  emptyCard: {
-    backgroundColor: '#fff',
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: Colors.textMuted,
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 100,
+    paddingTop: Spacing.sm,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: Radius.xl,
+    marginBottom: 20,
     overflow: 'hidden',
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    minHeight: 320,
-  },
-  cardImage: {
-    width: '100%',
-    height: 210,
-  },
-  cardBody: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
-    gap: Spacing.sm,
+    padding: 16,
   },
-  cardAuthor: {
-    fontSize: 18,
-    color: Colors.textPrimary,
+  authorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  cardHandle: {
-    color: Colors.textMuted,
-    fontSize: 14,
-  },
-  cardLocation: {
-    color: Colors.textMuted,
-    fontSize: 13,
-  },
-  shareButton: {
+  authorAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.primary + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shareLabel: {
+  avatarText: {
+    color: Colors.primary,
+    fontSize: 18,
+  },
+  cardAuthor: {
     fontSize: 16,
     color: Colors.textPrimary,
   },
+  cardLocation: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  cardImage: {
+    width: '100%',
+    height: 240,
+    resizeMode: 'cover',
+  },
+  cardContent: {
+    padding: 16,
+  },
   cardBodyText: {
     fontSize: 15,
-    lineHeight: 22,
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    lineHeight: 22,
+    marginBottom: 20,
   },
-  timestamp: {
+  donationSection: {
+    backgroundColor: Colors.background,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  progressLabel: {
     fontSize: 12,
-    color: Colors.textMuted,
-    marginBottom: Spacing.sm,
+    color: Colors.textSecondary,
+  },
+  progressPercent: {
+    fontSize: 12,
+    color: Colors.primary,
   },
   progressTrack: {
-    height: 10,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceElevated,
+    height: 8,
+    backgroundColor: '#E5E5EA',
+    borderRadius: 4,
     overflow: 'hidden',
-    marginBottom: Spacing.sm,
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
     backgroundColor: Colors.primary,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  progressFooter: {
+    alignItems: 'flex-start',
   },
-  progressCopy: {
+  raisedText: {
     fontSize: 14,
     color: Colors.textPrimary,
   },
-  donateButton: {
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+  donateBtn: {
     backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
-  donateLabel: {
+  donateBtnText: {
     color: '#fff',
-    fontSize: 14,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    zIndex: 10,
-  },
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  drawerRow: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  drawer: {
-    width: '65%',
-    maxWidth: 380,
-    backgroundColor: '#fff',
-    borderTopRightRadius: Radius.xl,
-    borderBottomRightRadius: Radius.xl,
-    padding: Spacing.lg,
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  scrim: {
-    flex: 1,
-  },
-  drawerTitle: {
-    fontSize: 22,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  drawerSection: {
-    marginBottom: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  drawerLabel: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  drawerItem: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-  },
-  drawerItemActive: {
-    backgroundColor: 'rgba(229,57,53,0.1)',
-  },
-  drawerItemText: {
     fontSize: 16,
-    color: Colors.textPrimary,
   },
-  drawerItemTextActive: {
-    color: Colors.primary,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
 });
+

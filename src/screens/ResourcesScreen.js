@@ -1,325 +1,327 @@
-import { useMemo, useState } from 'react';
-import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { useMemo, useState, useCallback } from 'react';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  Animated,
-  Dimensions,
-  Easing,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
 } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import { useStrings } from '../localization/useStrings';
 import { resources } from '../data/resources';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing } from '../theme/metrics';
 import { useTypography } from '../theme/typography';
-
-const categories = ['All', ...new Set(resources.map((item) => item.category))];
+import { SearchFilterBar } from '../components/SearchFilterBar';
 
 const ResourceCard = ({ item, typography }) => (
-  <View style={styles.card}>
+  <TouchableOpacity style={styles.card} activeOpacity={0.7}>
     <View style={styles.cardHeader}>
-      <View style={styles.badge}>
-        <Text style={[styles.badgeLabel, { fontFamily: typography.semibold }]}>{item.category}</Text>
+      <View style={[styles.badge, { backgroundColor: item.category === 'Medical' || item.category === 'Helpline' ? '#F2F9F2' : '#F0F7FF' }]}>
+        <Text style={[styles.badgeLabel, {
+          fontFamily: typography.semibold,
+          color: item.category === 'Medical' || item.category === 'Helpline' ? Colors.success : Colors.info
+        }]}>
+          {item.category}
+        </Text>
       </View>
       <View style={styles.region}>
-        <Feather name="map-pin" size={14} color={Colors.primary} />
+        <Feather name="map-pin" size={14} color={Colors.textSecondary} />
         <Text style={[styles.regionLabel, { fontFamily: typography.regular }]}>{item.region}</Text>
       </View>
     </View>
+
     <Text style={[styles.cardTitle, { fontFamily: typography.bold }]}>{item.title}</Text>
-    <Text style={[styles.cardDescription, { fontFamily: typography.regular }]}>{item.description}</Text>
-    <View style={styles.metaRow}>
-      <Feather name="phone" size={16} color={Colors.textMuted} />
-      <Text style={[styles.metaText, { fontFamily: typography.semibold }]}>{item.contact}</Text>
+    <Text style={[styles.cardDescription, { fontFamily: typography.regular }]} numberOfLines={2}>
+      {item.description}
+    </Text>
+
+    <View style={styles.cardFooter}>
+      <View style={styles.contactInfo}>
+        <Feather name="phone" size={16} color={Colors.primary} />
+        <Text style={[styles.metaText, { fontFamily: typography.semibold }]}>{item.contact}</Text>
+      </View>
+      <TouchableOpacity style={styles.callButton}>
+        <Feather name="external-link" size={18} color={Colors.primary} />
+      </TouchableOpacity>
     </View>
-    <Text style={[styles.escalation, { fontFamily: typography.regular }]}>{item.escalation}</Text>
-  </View>
+  </TouchableOpacity>
 );
+
+const QuickLinkCard = ({ label, icon, onPress, typography }) => {
+  const words = label.split(' ');
+  const firstLine = words[0];
+  const secondLine = words.slice(1).join(' ');
+
+  return (
+    <TouchableOpacity style={styles.quickLinkItem} onPress={onPress} activeOpacity={0.8}>
+      <View style={styles.quickLinkIconBox}>
+        <Feather name={icon} size={20} color="#333" />
+      </View>
+      <View style={styles.quickLinkTextContainer}>
+        <Text style={[styles.quickLinkLabel, { fontFamily: typography.bold }]}>{firstLine}</Text>
+        <Text style={[styles.quickLinkLabel, { fontFamily: typography.bold }]}>{secondLine}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export const ResourcesScreen = () => {
   const strings = useStrings();
   const typography = useTypography();
   const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState('All');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerAnim] = useState(new Animated.Value(-Dimensions.get('window').width));
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useFocusEffect(
+    useCallback(() => {
+      // Reset filters when screen comes into focus
+      setActiveCategory('All');
+      setSearchQuery('');
+    }, [])
+  );
+
+  const categories = useMemo(() => {
+    const unique = Array.from(new Set(resources.map((r) => r.category).filter(Boolean)));
+    unique.sort((a, b) => String(a).localeCompare(String(b)));
+    return ['All', ...unique];
+  }, []);
 
   const filteredResources = useMemo(() => {
-    if (activeCategory === 'All') {
-      return resources;
-    }
-    return resources.filter((item) => item.category === activeCategory);
-  }, [activeCategory]);
-
-  const openDrawer = () => {
-    setDrawerOpen(true);
-    Animated.timing(drawerAnim, {
-      toValue: 0,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeDrawer = () => {
-    Animated.timing(drawerAnim, {
-      toValue: -Dimensions.get('window').width,
-      duration: 200,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => setDrawerOpen(false));
-  };
-
-  const handleCategorySelect = (category) => {
-    setActiveCategory(category);
-    closeDrawer();
-  };
+    return resources.filter((item) => {
+      const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, searchQuery]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topRow}>
-        <TouchableOpacity style={styles.menuIcon} activeOpacity={0.9} onPress={openDrawer}>
-          <Text style={[styles.menuText, { fontFamily: typography.semibold }]}>{'\u2261'}</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>{strings.navigation.resources}</Text>
-        <View style={{ width: 48 }} />
-      </View>
-      <FlatList
-        contentContainerStyle={styles.list}
-        data={filteredResources}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ResourceCard item={item} typography={typography} />}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        showsVerticalScrollIndicator={false}
-      />
-
-      {drawerOpen ? (
-        <View style={styles.overlay} pointerEvents="box-none">
-          <BlurView intensity={28} tint="light" style={styles.blurOverlay} />
-          <View style={styles.drawerRow}>
-            <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
-              <Text style={[styles.drawerTitle, { fontFamily: typography.bold }]}>Navigate</Text>
-              <View style={styles.drawerSection}>
-                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Categories</Text>
-                {categories.map((category) => {
-                  const active = category === activeCategory;
-                  return (
-                    <TouchableOpacity
-                      key={category}
-                      style={[styles.drawerItem, active && styles.drawerItemActive]}
-                      activeOpacity={0.9}
-                      onPress={() => handleCategorySelect(category)}
-                    >
-                      <Text
-                        style={[
-                          styles.drawerItemText,
-                          { fontFamily: typography.semibold },
-                          active && styles.drawerItemTextActive,
-                        ]}
-                      >
-                        {category}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <View style={styles.drawerSection}>
-                <Text style={[styles.drawerLabel, { fontFamily: typography.semibold }]}>Quick Links</Text>
-                <TouchableOpacity
-                  style={styles.drawerItem}
-                  activeOpacity={0.9}
-                  onPress={() => {
-                    closeDrawer();
-                    navigation.navigate('ResourceTransparency');
-                  }}
-                >
-                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
-                    Resource Handle
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.drawerItem}
-                  activeOpacity={0.9}
-                  onPress={() => {
-                    closeDrawer();
-                    navigation.navigate('AvailableService');
-                  }}
-                >
-                  <Text style={[styles.drawerItemText, { fontFamily: typography.semibold }]}>
-                    Available Service
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-            <Pressable style={styles.scrim} onPress={closeDrawer} />
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Sticky Section */}
+        <View style={styles.stickyHeader}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View>
+              <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>Resources</Text>
+              <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Safety tools and assistance</Text>
+            </View>
+            <View style={{ width: 44 }} />
           </View>
+
+          {/* Quick Links Section */}
+          <View style={styles.quickLinksSection}>
+            <View style={styles.quickLinksRow}>
+              <QuickLinkCard
+                label="Resource Handle"
+                icon="check-circle"
+                onPress={() => navigation.navigate('Home', { screen: 'ResourceTransparency' })}
+                typography={typography}
+              />
+              <QuickLinkCard
+                label="Available Service"
+                icon="briefcase"
+                onPress={() => navigation.navigate('Home', { screen: 'AvailableService' })}
+                typography={typography}
+              />
+            </View>
+          </View>
+
+          <SearchFilterBar
+            searchValue={searchQuery}
+            onChangeSearch={setSearchQuery}
+            searchPlaceholder="Search resources, police..."
+            filters={categories}
+            selectedFilter={activeCategory}
+            onSelectFilter={setActiveCategory}
+          />
         </View>
-      ) : null}
-    </SafeAreaView>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+
+          {/* Resources List */}
+          <View style={styles.listSection}>
+            {filteredResources.map((item) => (
+              <ResourceCard key={item.id} item={item} typography={typography} />
+            ))}
+            {filteredResources.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="text-search" size={64} color={Colors.textSecondary} />
+                <Text style={[styles.emptyText, { fontFamily: typography.regular }]}>
+                  No resources found matching your criteria.
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.surface,
   },
-  topRow: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 30,
+    paddingBottom: Spacing.xs,
+  },
+  stickyHeader: {
+    backgroundColor: Colors.background,
+    zIndex: 10,
+    paddingBottom: Spacing.xs,
+  },
+  headerTitle: {
+    fontSize: 26,
+    color: Colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginTop: -2,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    letterSpacing: 1,
+    marginBottom: 16,
+    paddingHorizontal: Spacing.lg,
+  },
+  quickLinksSection: {
+    marginTop: 10,
+  },
+  quickLinksRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    gap: 12,
+  },
+  quickLinkItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    borderRadius: 24,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#EFEFEF',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  menuIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F4E7D8',
+  quickLinkIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuText: {
-    fontSize: 18,
-    color: Colors.textPrimary,
+  quickLinkTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  list: {
-    padding: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
+  quickLinkLabel: {
+    fontSize: 13,
+    color: '#3A3A3C',
+    lineHeight: 16,
   },
-  headerTitle: {
-    fontSize: 22,
-    color: Colors.textPrimary,
+  listSection: {
+    paddingHorizontal: Spacing.lg,
   },
   card: {
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
     backgroundColor: '#fff',
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    borderRadius: Radius.lg,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: 12,
   },
   badge: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.sm,
-    backgroundColor: '#FDEFE3',
+    borderRadius: 8,
   },
   badgeLabel: {
-    fontSize: 12,
-    color: Colors.primary,
+    fontSize: 11,
+    textTransform: 'uppercase',
   },
   region: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 4,
   },
   regionLabel: {
-    fontSize: 13,
-    color: Colors.textMuted,
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 19,
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    marginBottom: 6,
   },
   cardDescription: {
     fontSize: 14,
     color: Colors.textMuted,
-    lineHeight: 20,
-    marginBottom: Spacing.sm,
+    lineHeight: 22,
+    marginBottom: 16,
   },
-  metaRow: {
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F2F2F7',
+    paddingTop: 12,
+  },
+  contactInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
+    gap: 8,
   },
   metaText: {
     fontSize: 15,
     color: Colors.textPrimary,
   },
-  escalation: {
-    fontSize: 13,
-    color: Colors.textMuted,
+  callButton: {
+    padding: 8,
   },
-  separator: {
-    height: Spacing.xl,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    zIndex: 10,
-  },
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  drawerRow: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  drawer: {
-    width: '65%',
-    maxWidth: 380,
-    backgroundColor: '#fff',
-    borderTopRightRadius: Radius.xl,
-    borderBottomRightRadius: Radius.xl,
-    padding: Spacing.lg,
-    shadowColor: Colors.shadow,
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  scrim: {
-    flex: 1,
-  },
-  drawerTitle: {
-    fontSize: 20,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
-  drawerSection: {
-    marginBottom: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  drawerLabel: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  drawerItem: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-  },
-  drawerItemActive: {
-    backgroundColor: 'rgba(229,57,53,0.1)',
-  },
-  drawerItemText: {
+  emptyText: {
+    marginTop: 16,
+    color: Colors.textSecondary,
     fontSize: 15,
-    color: Colors.textPrimary,
-  },
-  drawerItemTextActive: {
-    color: Colors.primary,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
+
+
+

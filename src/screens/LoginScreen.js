@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppContext } from '../context/AppContext';
 import { useStrings } from '../localization/useStrings';
 import { Colors } from '../theme/colors';
@@ -9,13 +9,23 @@ export const LoginScreen = () => {
   const strings = useStrings();
   const typography = useTypography();
   const { setIsAuthenticated } = useAppContext();
+  const { width } = useWindowDimensions();
+
+  const contentStyle = [
+    styles.content,
+    width >= 768 && { maxWidth: 480 },
+  ];
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.loginTitle}</Text>
-      <TouchableOpacity style={styles.button} onPress={() => setIsAuthenticated(true)}>
-        <Text style={[styles.buttonLabel, { fontFamily: typography.semibold }]}>{strings.loginCta}</Text>
-      </TouchableOpacity>
+      <View style={contentStyle}>
+        <Text style={[styles.title, { fontFamily: typography.bold }]}>{strings.loginTitle}</Text>
+        <TouchableOpacity style={styles.button} onPress={() => setIsAuthenticated(true)}>
+          <Text style={[styles.buttonLabel, { fontFamily: typography.semibold }]}>
+            {strings.loginCta}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -27,6 +37,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.lg,
+  },
+  content: {
+    width: '100%',
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,

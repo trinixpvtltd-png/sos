@@ -24,6 +24,7 @@ export const useTypography = () => {
       semibold: family.semibold,
       bold: family.bold,
       bilingual: NOTO.semibold,
+      brand: 'saman',
     };
   }, [language]);
 };

@@ -2,33 +2,46 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useMemo } from 'react';
+import * as Linking from 'expo-linking';
 import { Colors } from '../theme/colors';
 import { CustomTabBar } from './CustomTabBar';
-import { HomeScreen } from '../screens/HomeScreen';
-import { NgoScreen } from '../screens/NgoScreen';
-import { SocialScreen } from '../screens/SocialScreen';
-import { ResourcesScreen } from '../screens/ResourcesScreen';
-import { RevelationScreen } from '../screens/RevelationScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import { ConfirmationScreen } from '../screens/ConfirmationScreen';
-import { LoginScreen } from '../screens/LoginScreen';
+import {
+  AvailableServiceScreen,
+  ConfirmationScreen,
+  ContributionDetailScreen,
+  DistressHistoryScreen,
+  DistressSignalScreen,
+  HomeScreen,
+  LoginScreen,
+  NgoScreen,
+  OtpScreen,
+  PersonalDetailScreen,
+  ProfileScreen,
+  ResourcesScreen,
+  ResourceTransparencyScreen,
+  RevelationScreen,
+  SocialScreen,
+  StartScreen,
+  ContributionsScreen,
+} from '../screens';
 import { useStrings } from '../localization/useStrings';
 import { useAppContext } from '../context/AppContext';
-import { ProfileOverviewScreen } from '../screens/profile/ProfileOverviewScreen';
-import { ContributionsScreen } from '../screens/profile/ContributionsScreen';
-import { DistressHistoryScreen } from '../screens/profile/DistressHistoryScreen';
-import { StartScreen } from '../screens/StartScreen';
-import { OtpScreen } from '../screens/OtpScreen';
-import { DistressSignalScreen } from '../screens/DistressSignalScreen';
-import { AvailableServiceScreen } from '../screens/AvailableServiceScreen';
-import { ResourceTransparencyScreen } from '../screens/ResourceTransparencyScreen';
-import { ContributionDetailScreen } from '../screens/ContributionDetailScreen';
-import { PersonalDetailScreen } from '../screens/PersonalDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
+const HomeStack = createNativeStackNavigator();
+
+const HomeNavigator = () => (
+  <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+    <HomeStack.Screen name="HomeMain" component={HomeScreen} />
+    <HomeStack.Screen name="DistressSignal" component={DistressSignalScreen} />
+    <HomeStack.Screen name="ContributionDetail" component={ContributionDetailScreen} />
+    <HomeStack.Screen name="AvailableService" component={AvailableServiceScreen} />
+    <HomeStack.Screen name="ResourceTransparency" component={ResourceTransparencyScreen} />
+  </HomeStack.Navigator>
+);
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -38,36 +51,90 @@ const navigationTheme = {
   },
 };
 
+const profileLinkingConfig = {
+  screens: {
+    ProfileOverview: '',
+    ProfileContributions: 'contributions',
+    ProfileHistory: 'history',
+    ProfilePersonal: 'details',
+    ProfileContribDetail: 'contribution/:mode?',
+  },
+};
+
+const homeLinkingConfig = {
+  screens: {
+    HomeMain: '',
+    DistressSignal: 'distress',
+    ContributionDetail: 'contribution/:mode?',
+    AvailableService: 'available-service',
+    ResourceTransparency: 'resource-transparency',
+  },
+};
+
+const authenticatedLinkingConfig = {
+  initialRouteName: 'Tabs',
+  screens: {
+    Tabs: {
+      path: '',
+      screens: {
+        Ngo: 'ngo',
+        Social: 'social',
+        Home: {
+          path: 'home',
+          screens: homeLinkingConfig.screens,
+        },
+        Resources: 'resources',
+        Revelation: 'revelation',
+        Profile: {
+          path: 'profile',
+          screens: profileLinkingConfig.screens,
+        },
+      },
+    },
+    Confirmation: 'confirmation',
+    PersonalDetail: 'personal-detail',
+  },
+};
+
+const authFlowLinkingConfig = {
+  initialRouteName: 'Start',
+  screens: {
+    Start: '',
+    Otp: 'otp',
+    Login: 'login',
+  },
+};
+
 const getTabConfig = (strings) => [
   {
     name: 'Ngo',
     component: NgoScreen,
     label: strings.navigation.ngo,
-    icon: 'heart',
+    icon: 'users',
   },
   {
     name: 'Social',
     component: SocialScreen,
     label: strings.navigation.social,
-    icon: 'twitter',
+    icon: 'zap',
   },
   {
     name: 'Home',
-    component: HomeScreen,
+    component: HomeNavigator,
     label: strings.navigation.home,
-    icon: 'home',
+    icon: 'grid',
   },
   {
     name: 'Resources',
     component: ResourcesScreen,
     label: strings.navigation.resources,
-    icon: 'clipboard-list',
+    icon: 'book',
   },
   {
     name: 'Revelation',
     component: RevelationScreen,
     label: strings.navigation.revelation,
-    icon: 'headphones',
+    icon: 'mic',
   },
 ];
 
@@ -77,8 +144,12 @@ const Tabs = () => {
 
   return (
     <Tab.Navigator
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        unmountOnBlur: true,
+      }}
       tabBar={(props) => <CustomTabBar {...props} />}
+      initialRouteName="Home"
     >
       {tabConfig.map((tab) => (
         <Tab.Screen
@@ -88,6 +159,7 @@ const Tabs = () => {
           options={{ tabBarLabel: tab.label, tabBarIcon: tab.icon }}
         />
       ))}
+      <Tab.Screen name="Profile" component={ProfileNavigator} />
     </Tab.Navigator>
   );
 };
@@ -101,77 +173,54 @@ const AuthNavigator = () => (
 );
 
 const ProfileNavigator = () => (
-  <ProfileStack.Navigator>
+  <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
     <ProfileStack.Screen
       name="ProfileOverview"
       component={ProfileScreen}
-      options={{ title: 'Profile' }}
     />
     <ProfileStack.Screen
       name="ProfileContributions"
       component={ContributionsScreen}
-      options={{ title: 'Contributions' }}
     />
     <ProfileStack.Screen
       name="ProfileHistory"
       component={DistressHistoryScreen}
-      options={{ title: 'Distress History' }}
     />
     <ProfileStack.Screen
       name="ProfilePersonal"
       component={PersonalDetailScreen}
-      options={{ title: 'Personal Detail' }}
     />
     <ProfileStack.Screen
       name="ProfileContribDetail"
       component={ContributionDetailScreen}
-      options={{ title: 'Contributions' }}
     />
   </ProfileStack.Navigator>
 );
 
 const MainNavigator = () => (
-  <RootStack.Navigator>
-    <RootStack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-    <RootStack.Screen
-      name="Profile"
-      component={ProfileNavigator}
-      options={{ headerShown: false }}
-    />
+  <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Screen name="Tabs" component={Tabs} />
     <RootStack.Screen name="Confirmation" component={ConfirmationScreen} />
-    <RootStack.Screen
-      name="DistressSignal"
-      component={DistressSignalScreen}
-      options={{ title: 'Distress Signal' }}
-    />
-    <RootStack.Screen
-      name="AvailableService"
-      component={AvailableServiceScreen}
-      options={{ title: 'Available Service' }}
-    />
-    <RootStack.Screen
-      name="ResourceTransparency"
-      component={ResourceTransparencyScreen}
-      options={{ title: 'Resource Transparency' }}
-    />
-    <RootStack.Screen
-      name="ContributionDetail"
-      component={ContributionDetailScreen}
-      options={{ title: 'Contribution Detail' }}
-    />
     <RootStack.Screen
       name="PersonalDetail"
       component={PersonalDetailScreen}
-      options={{ title: 'Personal Detail' }}
     />
   </RootStack.Navigator>
 );
 
 export const AppNavigator = () => {
   const { isAuthenticated } = useAppContext();
+  const linking = useMemo(() => ({
+    prefixes: [
+      Linking.createURL('/'),
+      'http://localhost:8081',
+      'http://localhost:19006',
+    ],
+    config: isAuthenticated ? authenticatedLinkingConfig : authFlowLinkingConfig,
+  }), [isAuthenticated]);
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer theme={navigationTheme} linking={linking}>
       {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

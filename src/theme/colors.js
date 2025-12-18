@@ -1,21 +1,45 @@
 export const Colors = {
-  primary: '#E53935',
-  accent: '#F5A45C',
-  gradientTop: '#FF9800',
-  gradientBottom: '#D2A77F',
-  surface: '#F9F1E4',
-  surfaceElevated: '#F2E3D2',
-  footerLight: '#F0E0CA',
-  footerDark: '#D5C1A4',
-  textPrimary: '#3D2A20',
-  textMuted: 'rgba(61,42,32,0.7)',
-  border: 'rgba(255,255,255,0.6)',
-  shadow: 'rgba(0,0,0,0.2)',
+  // Brand Colors
+  primary: '#FF3B30', // Vibrant iOS-style Red
+  secondary: '#FF9500', // iOS-style Orange
+  accent: '#5856D6', // Modern Purple
+
+  // Base Colors
+  background: '#F2F2F7', // Modern iOS background
+  card: '#FFFFFF',
+  text: '#000000',
+  textSecondary: '#8E8E93',
+
+  // Status Colors
+  success: '#34C759',
+  warning: '#FFCC00',
+  danger: '#FF3B30',
+  info: '#007AFF',
+
+  // Glassmorphism / UI
+  glass: 'rgba(255, 255, 255, 0.7)',
+  glassDark: 'rgba(0, 0, 0, 0.3)',
+  border: 'rgba(0, 0, 0, 0.1)',
+  shadow: 'rgba(0, 0, 0, 0.15)',
+
+  // Old colors kept for compatibility if needed, but renamed/mapped
+  surface: '#FFFFFF',
+  surfaceElevated: '#F9F9F9',
+  textPrimary: '#1C1C1E',
+  textMuted: '#8E8E93',
 };
 
 export const Gradients = {
-  warmVertical: [Colors.gradientTop, Colors.gradientBottom],
-  footer: [Colors.footerLight, Colors.footerDark],
-  sosButton: ['#E65157', '#D32F2F'],
-  mediaButton: ['#F3AA5A', '#E08B3B'],
+  primary: ['#FF3B30', '#FF2D55'],
+  warning: ['#FF9500', '#FFCC00'],
+  info: ['#007AFF', '#5AC8FA'],
+  dark: ['#1C1C1E', '#2C2C2E'],
+  glass: ['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.4)'],
+
+  // Legacy compatibility
+  warmVertical: ['#FF3B30', '#FF9500'],
+  footer: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.8)'],
+  sosButton: ['#FF3B30', '#FF2D55'],
+  mediaButton: ['#5856D6', '#AF52DE'],
 };
+
