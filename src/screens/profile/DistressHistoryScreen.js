@@ -1,200 +1,197 @@
-import React from 'react';
-import { FlatList, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/colors';
 import { Radius, Spacing } from '../../theme/metrics';
 import { useTypography } from '../../theme/typography';
+import { useStrings } from '../../localization/useStrings';
+import { useIncidentsContext } from '../../context/IncidentsContext';
+import { SearchFilterBar } from '../../components/SearchFilterBar';
+import { EmptyStateCard } from '../../components/EmptyStateCard';
+import { StatusChip } from '../../components/StatusChip';
 
-const incidents = [
-  {
-    id: 'ticket-9021',
-    label: 'SOS #9021 - Industrial belt',
-    status: 'Closed',
-    responseTime: '11 min',
-    date: '12 Oct 2023',
-    location: 'Sector 150, Noida',
-  },
-  {
-    id: 'ticket-9018',
-    label: 'SOS #9018 - Metro corridor',
-    status: 'In Review',
-    responseTime: 'Pending',
-    date: '08 Oct 2023',
-    location: 'Alpha-1, Gr. Noida',
-  },
-];
+const TYPE_FILTERS = ['All', 'SOS', 'Spectator Alert', 'Report'];
 
 export const DistressHistoryScreen = () => {
-  const typography = useTypography();
   const navigation = useNavigation();
+  const typography = useTypography();
+  const strings = useStrings();
+  const { groupedIncidents } = useIncidentsContext();
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.statusBadge, {
-          backgroundColor: item.status === 'Closed' ? Colors.success + '15' : Colors.primary + '15'
-        }]}>
-          <Text style={[styles.statusText, {
-            fontFamily: typography.bold,
-            color: item.status === 'Closed' ? Colors.success : Colors.primary
-          }]}>
-            {item.status.toUpperCase()}
-          </Text>
-        </View>
-        <Text style={[styles.dateText, { fontFamily: typography.regular }]}>{item.date}</Text>
-      </View>
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('All');
 
-      <Text style={[styles.label, { fontFamily: typography.bold }]}>{item.label}</Text>
+  const applyFilters = (list = []) => {
+    const query = searchQuery.trim().toLowerCase();
 
-      <View style={styles.cardMeta}>
-        <View style={styles.metaRow}>
-          <Feather name="map-pin" size={14} color={Colors.textMuted} />
-          <Text style={[styles.metaText, { fontFamily: typography.regular }]}>{item.location}</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Feather name="clock" size={14} color={Colors.textMuted} />
-          <Text style={[styles.metaText, { fontFamily: typography.regular }]}>Response: {item.responseTime}</Text>
-        </View>
-      </View>
-    </View>
-  );
+    return list.filter((incident) => {
+      const matchesType = typeFilter === 'All' || incident.type === typeFilter;
+      if (!matchesType) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const blob = `${incident.id} ${incident.type} ${incident.description}`.toLowerCase();
+      return blob.includes(query);
+    });
+  };
+
+  const sections = useMemo(() => ({
+    active: applyFilters(groupedIncidents.active),
+    recent: applyFilters(groupedIncidents.recent),
+    older: applyFilters(groupedIncidents.older),
+  }), [groupedIncidents, searchQuery, typeFilter]);
+
+  const isEmpty = !sections.active.length && !sections.recent.length && !sections.older.length;
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Profile')}>
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Feather name="chevron-left" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>SOS History</Text>
-            <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Track your emergency signals</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>{strings.distress.historyTitle}</Text>
+            <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>{strings.distress.historySubtitle}</Text>
           </View>
         </View>
 
-        <FlatList
-          style={styles.list}
-          contentContainerStyle={styles.content}
-          data={incidents}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="history" size={64} color={Colors.textMuted} />
-              <Text style={[styles.emptyText, { fontFamily: typography.semibold }]}>No history found</Text>
-            </View>
-          )}
+        <SearchFilterBar
+          searchValue={searchQuery}
+          onChangeSearch={setSearchQuery}
+          searchPlaceholder={strings.distress.searchPlaceholder}
+          filters={TYPE_FILTERS}
+          selectedFilter={typeFilter}
+          onSelectFilter={setTypeFilter}
         />
+
+        {isEmpty ? (
+          <View style={styles.emptyWrap}>
+            <EmptyStateCard
+              icon="history"
+              title={strings.distress.emptyTitle}
+              description={strings.distress.emptyDescription}
+            />
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <Section title={strings.distress.activeGroup} incidents={sections.active} navigation={navigation} />
+            <Section title={strings.distress.recentGroup} incidents={sections.recent} navigation={navigation} />
+            <Section title={strings.distress.olderGroup} incidents={sections.older} navigation={navigation} />
+          </ScrollView>
+        )}
       </SafeAreaView>
     </View>
   );
 };
 
+const Section = ({ title, incidents, navigation }) => {
+  const typography = useTypography();
+
+  if (!incidents.length) {
+    return null;
+  }
+
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { fontFamily: typography.bold }]}>{title}</Text>
+      {incidents.map((incident) => (
+        <TouchableOpacity
+          key={incident.id}
+          style={styles.card}
+          onPress={() => navigation.navigate('CaseDetail', { incidentId: incident.id })}
+        >
+          <View style={styles.cardHead}>
+            <Text style={[styles.caseId, { fontFamily: typography.semibold }]}>{incident.id}</Text>
+            <StatusChip status={incident.status} label={incident.status} />
+          </View>
+          <View style={styles.tags}>
+            <StatusChip status={incident.type} label={incident.type} />
+          </View>
+          <Text style={[styles.cardText, { fontFamily: typography.regular }]} numberOfLines={2}>{incident.description}</Text>
+          <Text style={[styles.meta, { fontFamily: typography.regular }]}>{new Date(incident.createdAt).toLocaleString()}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 30,
-    paddingBottom: Spacing.md,
     gap: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 8,
   },
   backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ECECEC',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  headerText: {
-    flex: 1,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 24,
     color: Colors.textPrimary,
   },
   headerSubtitle: {
-    fontSize: 14,
     color: Colors.textMuted,
-    marginTop: -2,
+    fontSize: 13,
   },
-  list: {
-    flex: 1,
+  emptyWrap: {
+    paddingHorizontal: Spacing.lg,
   },
   content: {
-    padding: Spacing.lg,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 95,
+    gap: 10,
+  },
+  section: {
+    gap: 8,
+  },
+  sectionTitle: {
+    color: Colors.textPrimary,
+    fontSize: 14,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 15,
-    elevation: 2,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#E8E8EA',
+    padding: 12,
+    gap: 6,
   },
-  cardHeader: {
+  cardHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 8,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 10,
-    letterSpacing: 1,
-  },
-  dateText: {
+  caseId: {
+    color: Colors.textMuted,
     fontSize: 12,
-    color: Colors.textMuted,
   },
-  label: {
-    fontSize: 18,
-    color: Colors.textPrimary,
-    marginBottom: 12,
-  },
-  cardMeta: {
-    gap: 8,
-  },
-  metaRow: {
+  tags: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
   },
-  metaText: {
-    fontSize: 13,
+  cardText: {
     color: Colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 100,
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
+  meta: {
     color: Colors.textMuted,
+    fontSize: 12,
   },
 });

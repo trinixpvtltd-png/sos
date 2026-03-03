@@ -13,7 +13,13 @@ import {
   NotoSansDevanagari_400Regular,
   NotoSansDevanagari_600SemiBold,
 } from '@expo-google-fonts/noto-sans-devanagari';
-import { AppProvider } from './src/context/AppContext';
+import {
+  AppProvider,
+  ContactsProvider,
+  DraftReportsProvider,
+  IncidentsProvider,
+  SafetyProvider,
+} from './src/context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { Colors } from './src/theme/colors';
 
@@ -41,8 +47,16 @@ export default function App() {
     <GestureHandlerRootView style={styles.flex}>
       <SafeAreaProvider>
         <AppProvider>
-          <StatusBar style="light" />
-          <AppNavigator />
+          <ContactsProvider>
+            <SafetyProvider>
+              <DraftReportsProvider>
+                <IncidentsProvider>
+                  <StatusBar style="light" />
+                  <AppNavigator />
+                </IncidentsProvider>
+              </DraftReportsProvider>
+            </SafetyProvider>
+          </ContactsProvider>
         </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

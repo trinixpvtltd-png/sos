@@ -1,165 +1,209 @@
-import { useMemo, useState, useCallback } from 'react';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
+  Alert,
+  Linking,
+  ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useStrings } from '../localization/useStrings';
+import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { ResourceTransparencyPanel } from '../components/ResourceTransparencyPanel';
 import { resources } from '../data/resources';
 import { Colors } from '../theme/colors';
 import { Radius, Spacing } from '../theme/metrics';
 import { useTypography } from '../theme/typography';
+import { useStrings } from '../localization/useStrings';
 import { SearchFilterBar } from '../components/SearchFilterBar';
-
-const ResourceCard = ({ item, typography }) => (
-  <TouchableOpacity style={styles.card} activeOpacity={0.7}>
-    <View style={styles.cardHeader}>
-      <View style={[styles.badge, { backgroundColor: item.category === 'Medical' || item.category === 'Helpline' ? '#F2F9F2' : '#F0F7FF' }]}>
-        <Text style={[styles.badgeLabel, {
-          fontFamily: typography.semibold,
-          color: item.category === 'Medical' || item.category === 'Helpline' ? Colors.success : Colors.info
-        }]}>
-          {item.category}
-        </Text>
-      </View>
-      <View style={styles.region}>
-        <Feather name="map-pin" size={14} color={Colors.textSecondary} />
-        <Text style={[styles.regionLabel, { fontFamily: typography.regular }]}>{item.region}</Text>
-      </View>
-    </View>
-
-    <Text style={[styles.cardTitle, { fontFamily: typography.bold }]}>{item.title}</Text>
-    <Text style={[styles.cardDescription, { fontFamily: typography.regular }]} numberOfLines={2}>
-      {item.description}
-    </Text>
-
-    <View style={styles.cardFooter}>
-      <View style={styles.contactInfo}>
-        <Feather name="phone" size={16} color={Colors.primary} />
-        <Text style={[styles.metaText, { fontFamily: typography.semibold }]}>{item.contact}</Text>
-      </View>
-      <TouchableOpacity style={styles.callButton}>
-        <Feather name="external-link" size={18} color={Colors.primary} />
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
-);
-
-const QuickLinkCard = ({ label, icon, onPress, typography }) => {
-  const words = label.split(' ');
-  const firstLine = words[0];
-  const secondLine = words.slice(1).join(' ');
-
-  return (
-    <TouchableOpacity style={styles.quickLinkItem} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.quickLinkIconBox}>
-        <Feather name={icon} size={20} color="#333" />
-      </View>
-      <View style={styles.quickLinkTextContainer}>
-        <Text style={[styles.quickLinkLabel, { fontFamily: typography.bold }]}>{firstLine}</Text>
-        <Text style={[styles.quickLinkLabel, { fontFamily: typography.bold }]}>{secondLine}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-};
+import { EmptyStateCard } from '../components/EmptyStateCard';
+import { LoadingSkeletonCard } from '../components/LoadingSkeletonCard';
 
 export const ResourcesScreen = () => {
-  const strings = useStrings();
-  const typography = useTypography();
   const navigation = useNavigation();
+  const typography = useTypography();
+  const strings = useStrings();
+
+  const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [favorites, setFavorites] = useState([]);
+  const [isResourceHandleOpen, setIsResourceHandleOpen] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      // Reset filters when screen comes into focus
-      setActiveCategory('All');
-      setSearchQuery('');
-    }, [])
-  );
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsLoading(false), 400);
+    return () => clearTimeout(timeout);
+  }, []);
 
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(resources.map((r) => r.category).filter(Boolean)));
-    unique.sort((a, b) => String(a).localeCompare(String(b)));
+    const unique = Array.from(new Set(resources.map((item) => item.category).filter(Boolean)));
     return ['All', ...unique];
   }, []);
 
-  const filteredResources = useMemo(() => {
-    return resources.filter((item) => {
-      const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+  const filteredResources = useMemo(() => resources.filter((item) => {
+    const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+    if (!matchesCategory) {
+      return false;
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+
+    const blob = `${item.title} ${item.description} ${item.region} ${item.contact}`.toLowerCase();
+    return blob.includes(query);
+  }), [activeCategory, searchQuery]);
+
+  const toggleFavorite = (resourceId) => {
+    setFavorites((prev) => (
+      prev.includes(resourceId)
+        ? prev.filter((id) => id !== resourceId)
+        : [...prev, resourceId]
+    ));
+  };
+
+  const onCall = (item) => {
+    if (/^\+?\d/.test(item.contact)) {
+      Linking.openURL(`tel:${item.contact.replace(/\s/g, '')}`);
+    } else {
+      Alert.alert(strings.resources.actions.callTitle, strings.resources.actions.callNotAvailable);
+    }
+  };
+
+  const onCopy = (item) => {
+    Alert.alert(strings.resources.actions.copyTitle, `${strings.resources.actions.copySuccess}: ${item.contact}`);
+  };
+
+  const onShare = async (item) => {
+    await Share.share({
+      message: `${item.title} - ${item.contact}`,
     });
-  }, [activeCategory, searchQuery]);
+  };
+
+  const openQuickLinkRoute = (screenName, params) => {
+    navigation.navigate('Home', { screen: screenName, params });
+  };
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Sticky Section */}
-        <View style={styles.stickyHeader}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>Resources</Text>
-              <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Safety tools and assistance</Text>
-            </View>
-            <View style={{ width: 44 }} />
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>{strings.resources.titleNew}</Text>
+            <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>{strings.resources.subtitleNew}</Text>
           </View>
-
-          {/* Quick Links Section */}
-          <View style={styles.quickLinksSection}>
-            <View style={styles.quickLinksRow}>
-              <QuickLinkCard
-                label="Resource Handle"
-                icon="check-circle"
-                onPress={() => navigation.navigate('Home', { screen: 'ResourceTransparency' })}
-                typography={typography}
-              />
-              <QuickLinkCard
-                label="Available Service"
-                icon="briefcase"
-                onPress={() => navigation.navigate('Home', { screen: 'AvailableService' })}
-                typography={typography}
-              />
-            </View>
-          </View>
-
-          <SearchFilterBar
-            searchValue={searchQuery}
-            onChangeSearch={setSearchQuery}
-            searchPlaceholder="Search resources, police..."
-            filters={categories}
-            selectedFilter={activeCategory}
-            onSelectFilter={setActiveCategory}
-          />
+          <View style={{ width: 44 }} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-
-          {/* Resources List */}
-          <View style={styles.listSection}>
-            {filteredResources.map((item) => (
-              <ResourceCard key={item.id} item={item} typography={typography} />
-            ))}
-            {filteredResources.length === 0 && (
-              <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons name="text-search" size={64} color={Colors.textSecondary} />
-                <Text style={[styles.emptyText, { fontFamily: typography.regular }]}>
-                  No resources found matching your criteria.
-                </Text>
-              </View>
-            )}
+        <View style={styles.quickLinksSection}>
+          <View style={styles.quickLinksRow}>
+            <TopActionButton
+              label={strings.resources.quickLinks.resourceHandle}
+              icon="activity"
+              active={isResourceHandleOpen}
+              onPress={() => setIsResourceHandleOpen((prev) => !prev)}
+            />
+            <TopActionButton
+              label={strings.resources.quickLinks.availableService}
+              icon="briefcase"
+              onPress={() => openQuickLinkRoute('AvailableService')}
+            />
           </View>
+        </View>
+
+        <SearchFilterBar
+          searchValue={searchQuery}
+          onChangeSearch={setSearchQuery}
+          searchPlaceholder={strings.resources.searchPlaceholder}
+          filters={categories}
+          selectedFilter={activeCategory}
+          onSelectFilter={setActiveCategory}
+        />
+
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {isResourceHandleOpen ? (
+            <View style={styles.inlinePanelCard}>
+              <ResourceTransparencyPanel />
+            </View>
+          ) : null}
+
+          {isLoading ? (
+            <>
+              <LoadingSkeletonCard lines={3} />
+              <LoadingSkeletonCard lines={3} />
+              <LoadingSkeletonCard lines={3} />
+            </>
+          ) : filteredResources.length === 0 ? (
+            <EmptyStateCard
+              icon="search"
+              title={strings.resources.emptyTitle}
+              description={strings.resources.emptyDescription}
+            />
+          ) : (
+            filteredResources.map((item) => {
+              const favorite = favorites.includes(item.id);
+
+              return (
+                <View style={styles.card} key={item.id}>
+                  <View style={styles.cardHead}>
+                    <Text style={[styles.badge, { fontFamily: typography.semibold }]}>{item.category}</Text>
+                    <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
+                      <Feather
+                        name={favorite ? 'star' : 'star'}
+                        size={16}
+                        color={favorite ? '#E5A400' : Colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={[styles.cardTitle, { fontFamily: typography.bold }]}>{item.title}</Text>
+                  <Text style={[styles.cardDescription, { fontFamily: typography.regular }]}>{item.description}</Text>
+                  <Text style={[styles.cardMeta, { fontFamily: typography.regular }]}>
+                    {item.region} | {item.contact}
+                  </Text>
+
+                  <View style={styles.actionRow}>
+                    <ResourceAction icon="phone" label={strings.resources.actions.call} onPress={() => onCall(item)} />
+                    <ResourceAction icon="copy" label={strings.resources.actions.copy} onPress={() => onCopy(item)} />
+                    <ResourceAction icon="share-2" label={strings.resources.actions.share} onPress={() => onShare(item)} />
+                  </View>
+                </View>
+              );
+            })
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
+  );
+};
+
+const TopActionButton = ({ label, icon, onPress, active = false }) => {
+  const typography = useTypography();
+
+  return (
+    <TouchableOpacity
+      style={[styles.topActionButton, active && styles.topActionButtonActive]}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
+      <Feather name={icon} size={16} color={Colors.textPrimary} />
+      <Text style={[styles.topActionLabel, { fontFamily: typography.semibold }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const ResourceAction = ({ icon, label, onPress }) => {
+  const typography = useTypography();
+
+  return (
+    <TouchableOpacity style={styles.actionBtn} onPress={onPress}>
+      <Feather name={icon} size={14} color={Colors.textPrimary} />
+      <Text style={[styles.actionText, { fontFamily: typography.semibold }]}>{label}</Text>
+    </TouchableOpacity>
   );
 };
 
@@ -172,156 +216,114 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 8,
+    paddingBottom: 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 30,
-    paddingBottom: Spacing.xs,
-  },
-  stickyHeader: {
-    backgroundColor: Colors.background,
-    zIndex: 10,
-    paddingBottom: Spacing.xs,
   },
   headerTitle: {
-    fontSize: 26,
     color: Colors.textPrimary,
+    fontSize: 24,
   },
   headerSubtitle: {
-    fontSize: 14,
     color: Colors.textMuted,
-    marginTop: -2,
-  },
-  sectionTitle: {
     fontSize: 13,
-    color: Colors.textMuted,
-    letterSpacing: 1,
-    marginBottom: 16,
-    paddingHorizontal: Spacing.lg,
   },
   quickLinksSection: {
-    marginTop: 10,
+    paddingHorizontal: Spacing.lg,
+    gap: 8,
   },
   quickLinksRow: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    gap: 12,
+    gap: 10,
   },
-  quickLinkItem: {
+  topActionButton: {
     flex: 1,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#E8E8EA',
+    backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    borderRadius: 24,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#EFEFEF',
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  quickLinkIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F7',
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
-  quickLinkTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  topActionButtonActive: {
+    borderColor: '#F0A35B',
+    backgroundColor: '#FFF3E7',
   },
-  quickLinkLabel: {
-    fontSize: 13,
-    color: '#3A3A3C',
-    lineHeight: 16,
+  topActionLabel: {
+    flexShrink: 1,
+    color: Colors.textPrimary,
+    fontSize: 12,
   },
-  listSection: {
+  content: {
     paddingHorizontal: Spacing.lg,
+    paddingBottom: 95,
+    gap: 10,
+  },
+  inlinePanelCard: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#E8E8EA',
+    backgroundColor: '#fff',
+    padding: 14,
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: Radius.lg,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
-  region: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  regionLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  cardTitle: {
-    fontSize: 19,
-    color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F2F2F7',
-    paddingTop: 12,
-  },
-  contactInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8EA',
+    padding: 14,
     gap: 8,
   },
-  metaText: {
-    fontSize: 15,
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  badge: {
+    color: Colors.info,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  cardTitle: {
     color: Colors.textPrimary,
+    fontSize: 17,
   },
-  callButton: {
-    padding: 8,
+  cardDescription: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  emptyContainer: {
+  cardMeta: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  actionBtn: {
+    flex: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: '#E2E2E4',
+    backgroundColor: '#F6F6F8',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    gap: 6,
+    paddingVertical: 8,
   },
-  emptyText: {
-    marginTop: 16,
-    color: Colors.textSecondary,
-    fontSize: 15,
-    textAlign: 'center',
-    paddingHorizontal: 40,
+  actionText: {
+    color: Colors.textPrimary,
+    fontSize: 12,
   },
 });
-
-
-

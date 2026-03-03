@@ -1,32 +1,34 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { Colors, Gradients } from '../../theme/colors';
-import { Radius, Spacing } from '../../theme/metrics';
-import { useTypography } from '../../theme/typography';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { Colors } from '../../theme/colors';
+import { Spacing } from '../../theme/metrics';
+import { useTypography } from '../../theme/typography';
+import { useStrings } from '../../localization/useStrings';
 
-const AVATAR =
-  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=60';
+const ProfileLink = ({ icon, label, onPress, rightLabel }) => {
+  const typography = useTypography();
 
-const ProfileLink = ({ icon, label, onPress, typography, rightLabel }) => (
-  <TouchableOpacity style={styles.linkItem} onPress={onPress}>
-    <View style={styles.linkIconBox}>
-      <Feather name={icon} size={20} color={Colors.textPrimary} />
-    </View>
-    <Text style={[styles.linkLabel, { fontFamily: typography.semibold }]}>{label}</Text>
-    <View style={styles.linkRight}>
-      {rightLabel && <Text style={[styles.rightLabel, { fontFamily: typography.regular }]}>{rightLabel}</Text>}
-      <Feather name="chevron-right" size={18} color={Colors.textMuted} />
-    </View>
-  </TouchableOpacity>
-);
+  return (
+    <TouchableOpacity style={styles.linkItem} onPress={onPress}>
+      <View style={styles.linkIconBox}>
+        <Feather name={icon} size={19} color={Colors.textPrimary} />
+      </View>
+      <Text style={[styles.linkLabel, { fontFamily: typography.semibold }]}>{label}</Text>
+      <View style={styles.linkRight}>
+        {rightLabel ? <Text style={[styles.rightLabel, { fontFamily: typography.regular }]}>{rightLabel}</Text> : null}
+        <Feather name="chevron-right" size={18} color={Colors.textMuted} />
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export const ProfileOverviewScreen = () => {
   const navigation = useNavigation();
   const typography = useTypography();
+  const strings = useStrings();
 
   return (
     <View style={styles.container}>
@@ -37,67 +39,84 @@ export const ProfileOverviewScreen = () => {
               <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
             <View>
-              <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>Profile</Text>
-              <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>Manage your account</Text>
+              <Text style={[styles.headerTitle, { fontFamily: typography.bold }]}>{strings.profile.title}</Text>
+              <Text style={[styles.headerSubtitle, { fontFamily: typography.regular }]}>{strings.profile.subtitle}</Text>
             </View>
           </View>
+
+          <TouchableOpacity style={styles.settingsBtn} onPress={() => navigation.navigate('Settings')}>
+            <Feather name="settings" size={20} color={Colors.textPrimary} />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
-          {/* Menu Sections */}
-          <View style={styles.menuContainer}>
-            <Text style={[styles.sectionTitle, { fontFamily: typography.bold }]}>Account Settings</Text>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <Section title={strings.profile.sections.account}>
             <ProfileLink
               icon="user"
-              label="Personal Details"
+              label={strings.profile.links.personalDetails}
               onPress={() => navigation.navigate('ProfilePersonal')}
-              typography={typography}
             />
             <ProfileLink
               icon="heart"
-              label="My Contributions"
+              label={strings.profile.links.contributions}
               onPress={() => navigation.navigate('ProfileContribDetail')}
-              typography={typography}
-              rightLabel="₹12,400"
             />
             <ProfileLink
               icon="alert-triangle"
-              label="SOS History"
+              label={strings.profile.links.sosHistory}
               onPress={() => navigation.navigate('ProfileHistory')}
-              typography={typography}
-              rightLabel="Active"
             />
-          </View>
+          </Section>
 
-          <View style={styles.menuContainer}>
-            <Text style={[styles.sectionTitle, { fontFamily: typography.bold }]}>Support & Legal</Text>
+          <Section title={strings.profile.sections.safety}>
             <ProfileLink
-              icon="map-pin"
-              label="Emergency Services"
-              onPress={() => navigation.navigate('Home', { screen: 'AvailableService' })}
-              typography={typography}
+              icon="users"
+              label={strings.profile.links.emergencyContacts}
+              onPress={() => navigation.navigate('EmergencyContacts')}
+            />
+            <ProfileLink
+              icon="shield"
+              label={strings.profile.links.safetySetup}
+              onPress={() => navigation.navigate('SafetySetup')}
+            />
+            <ProfileLink
+              icon="sliders"
+              label={strings.profile.links.safetySettings}
+              onPress={() => navigation.navigate('SafetySettings')}
             />
             <ProfileLink
               icon="file-text"
-              label="Terms & Conditions"
-              onPress={() => { }}
-              typography={typography}
+              label={strings.profile.links.draftReports}
+              onPress={() => navigation.navigate('DraftReports')}
             />
             <ProfileLink
-              icon="info"
-              label="About Sankatmochan"
-              onPress={() => { }}
-              typography={typography}
+              icon="monitor"
+              label={strings.profile.links.demoRoleSwitcher}
+              onPress={() => navigation.navigate('Settings')}
             />
-          </View>
+          </Section>
 
-          <TouchableOpacity style={styles.logoutBtn}>
-            <Feather name="log-out" size={20} color={Colors.primary} />
-            <Text style={[styles.logoutText, { fontFamily: typography.bold }]}>Log Out</Text>
-          </TouchableOpacity>
+          <Section title={strings.profile.sections.support}>
+            <ProfileLink
+              icon="map-pin"
+              label={strings.profile.links.emergencyServices}
+              onPress={() => navigation.navigate('Home', { screen: 'AvailableService' })}
+            />
+            <ProfileLink icon="info" label={strings.profile.links.about} onPress={() => {}} />
+          </Section>
         </ScrollView>
       </SafeAreaView>
+    </View>
+  );
+};
+
+const Section = ({ title, children }) => {
+  const typography = useTypography();
+
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { fontFamily: typography.bold }]}>{title}</Text>
+      {children}
     </View>
   );
 };
@@ -115,13 +134,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingTop: 30,
-    paddingBottom: Spacing.md,
+    paddingTop: 8,
+    gap: 10,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   backBtn: {
     width: 44,
@@ -130,152 +150,72 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    marginRight: 4,
-  },
-  headerTitle: {
-    fontSize: 26,
-    color: Colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginTop: -2,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
   },
   settingsBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
   },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: 120,
-  },
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 24,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginRight: 20,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 24,
     color: Colors.textPrimary,
-    marginBottom: 4,
   },
-  idBadge: {
-    backgroundColor: Colors.primary + '10',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+  headerSubtitle: {
+    color: Colors.textMuted,
+    fontSize: 13,
   },
-  idText: {
-    fontSize: 12,
-    color: Colors.primary,
+  content: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 90,
+    gap: 14,
   },
-  statsBar: {
-    flexDirection: 'row',
-    backgroundColor: Colors.textPrimary,
+  section: {
+    backgroundColor: '#fff',
     borderRadius: 20,
-    paddingVertical: 20,
-    marginTop: 20,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    color: '#fff',
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  divider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  menuContainer: {
-    marginTop: 30,
+    borderWidth: 1,
+    borderColor: '#E8E8EA',
+    padding: 12,
   },
   sectionTitle: {
-    fontSize: 16,
     color: Colors.textPrimary,
-    marginBottom: 16,
-    marginLeft: 4,
+    fontSize: 15,
+    marginBottom: 8,
   },
   linkItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F1F3',
   },
   linkIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.background,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F5F5F7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   linkLabel: {
     flex: 1,
-    fontSize: 16,
     color: Colors.textPrimary,
+    fontSize: 14,
   },
   linkRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   rightLabel: {
-    fontSize: 13,
     color: Colors.textMuted,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 40,
-    paddingVertical: 16,
-    backgroundColor: Colors.primary + '10',
-    borderRadius: 16,
-  },
-  logoutText: {
-    color: Colors.primary,
-    fontSize: 16,
+    fontSize: 12,
   },
 });
-

@@ -1,63 +1,83 @@
-import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useStrings } from '../localization/useStrings';
-import { Colors, Gradients } from '../theme/colors';
-import { Radius, Spacing } from '../theme/metrics';
+import { Feather } from '@expo/vector-icons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { Colors } from '../theme/colors';
+import { Spacing } from '../theme/metrics';
 import { useTypography } from '../theme/typography';
+import { useStrings } from '../localization/useStrings';
+
+const getVariant = (mode, strings) => {
+  if (mode === 'spectator') {
+    return {
+      title: strings.confirmation.spectatorTitle,
+      subtitle: strings.confirmation.spectatorSubtitle,
+    };
+  }
+
+  if (mode === 'sos') {
+    return {
+      title: strings.confirmation.sosTitle,
+      subtitle: strings.confirmation.sosSubtitle,
+    };
+  }
+
+  return {
+    title: strings.confirmation.reportTitle,
+    subtitle: strings.confirmation.reportSubtitle,
+  };
+};
 
 export const ConfirmationScreen = () => {
-  const strings = useStrings();
   const typography = useTypography();
+  const strings = useStrings();
   const navigation = useNavigation();
+  const route = useRoute();
 
-  const goHome = () => {
-    navigation.navigate('Tabs', { screen: 'Home' });
-  };
+  const mode = route.params?.mode || 'report';
+  const caseId = route.params?.caseId;
+  const variant = getVariant(mode, strings);
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.content}>
           <View style={styles.successBox}>
             <View style={styles.iconCircle}>
-              <Feather name="check" size={42} color="#fff" />
+              <Feather name="check" size={36} color="#fff" />
             </View>
-            <Text style={[styles.title, { fontFamily: typography.bold }]}>Report Sent Successfully</Text>
-            <Text style={[styles.subtitle, { fontFamily: typography.regular }]}>
-              Our team has received your report and is initiating response protocols.
-            </Text>
+            <Text style={[styles.title, { fontFamily: typography.bold }]}>{variant.title}</Text>
+            <Text style={[styles.subtitle, { fontFamily: typography.regular }]}>{variant.subtitle}</Text>
           </View>
 
-          <View style={styles.detailsCard}>
-            <Text style={[styles.detailTitle, { fontFamily: typography.semibold }]}>What happens next?</Text>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNum}><Text style={styles.stepNumText}>1</Text></View>
-              <Text style={[styles.stepText, { fontFamily: typography.regular }]}>Emergency dispatcher reviews the details.</Text>
-            </View>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNum}><Text style={styles.stepNumText}>2</Text></View>
-              <Text style={[styles.stepText, { fontFamily: typography.regular }]}>Nearby response units are notified.</Text>
-            </View>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNum}><Text style={styles.stepNumText}>3</Text></View>
-              <Text style={[styles.stepText, { fontFamily: typography.regular }]}>You will receive updates directly in your activity log.</Text>
-            </View>
+          <View style={styles.caseCard}>
+            <Text style={[styles.caseLabel, { fontFamily: typography.regular }]}>{strings.confirmation.caseIdLabel}</Text>
+            <Text style={[styles.caseValue, { fontFamily: typography.bold }]}>{caseId || strings.common.notAvailable}</Text>
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.primaryBtn} onPress={goHome}>
-              <Text style={[styles.primaryBtnText, { fontFamily: typography.bold }]}>Return Home</Text>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => navigation.navigate('Tabs', { screen: 'Home' })}
+            >
+              <Text style={[styles.primaryBtnText, { fontFamily: typography.semibold }]}>{strings.confirmation.primary}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={() => navigation.navigate('DistressSignal')}
-            >
-              <Text style={[styles.secondaryBtnText, { fontFamily: typography.semibold }]}>View Activity Log</Text>
-            </TouchableOpacity>
+            {caseId ? (
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => navigation.navigate('Tabs', {
+                  screen: 'Home',
+                  params: {
+                    screen: 'CaseDetail',
+                    params: { incidentId: caseId },
+                  },
+                })}
+              >
+                <Text style={[styles.secondaryBtnText, { fontFamily: typography.semibold }]}>{strings.confirmation.secondary}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       </SafeAreaView>
@@ -75,99 +95,78 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+    gap: 16,
   },
   successBox: {
     alignItems: 'center',
-    marginBottom: 40,
+    gap: 8,
   },
   iconCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
     backgroundColor: Colors.success,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
     shadowColor: Colors.success,
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 6,
   },
   title: {
-    fontSize: 24,
     color: Colors.textPrimary,
+    fontSize: 24,
     textAlign: 'center',
-    marginBottom: 12,
   },
   subtitle: {
-    fontSize: 15,
     color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 20,
-  },
-  detailsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  detailTitle: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-    marginBottom: 20,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 16,
-  },
-  stepNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-  },
-  stepText: {
-    flex: 1,
     fontSize: 14,
-    color: Colors.textSecondary,
+    textAlign: 'center',
     lineHeight: 20,
   },
+  caseCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8E8EA',
+    padding: 14,
+    alignItems: 'center',
+  },
+  caseLabel: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+  caseValue: {
+    color: Colors.textPrimary,
+    fontSize: 18,
+    marginTop: 2,
+  },
   footer: {
-    marginTop: 40,
-    gap: 12,
+    gap: 10,
   },
   primaryBtn: {
+    borderRadius: 14,
     backgroundColor: Colors.textPrimary,
-    borderRadius: 16,
-    paddingVertical: 18,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   primaryBtnText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
   },
   secondaryBtn: {
-    paddingVertical: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E2E4',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
     alignItems: 'center',
   },
   secondaryBtnText: {
     color: Colors.textSecondary,
-    fontSize: 15,
+    fontSize: 13,
   },
 });
-

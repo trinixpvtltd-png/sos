@@ -1,0 +1,32 @@
+export const defaultAuthorityQueue = [
+  {
+    id: 'AQ-9001',
+    caseId: 'INC-260228-9001',
+    type: 'SOS',
+    priority: 'Urgent',
+    status: 'New',
+    location: 'Sector 137, Noida',
+    createdAt: '2026-02-28T09:15:00+05:30',
+    summary: 'User triggered SOS with silent mode enabled.',
+  },
+  {
+    id: 'AQ-9002',
+    caseId: 'INC-260228-9002',
+    type: 'Spectator Alert',
+    priority: 'Medium',
+    status: 'Assigned',
+    location: 'Mayur Vihar, Delhi',
+    createdAt: '2026-02-28T08:45:00+05:30',
+    summary: 'Bystander reported physical altercation at bus stand.',
+  },
+  {
+    id: 'AQ-9003',
+    caseId: 'INC-260227-9003',
+    type: 'Report',
+    priority: 'Low',
+    status: 'Resolved',
+    location: 'Gomti Nagar, Lucknow',
+    createdAt: '2026-02-27T20:22:00+05:30',
+    summary: 'Corruption tip with supporting media.',
+  },
+];

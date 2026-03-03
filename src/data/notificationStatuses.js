@@ -1,0 +1,32 @@
+export const defaultNotificationStatuses = [
+  {
+    id: 'ns-01',
+    incidentId: 'INC-260214-1001',
+    contactId: 'ct-1001',
+    contactName: 'Neha Jain',
+    channel: 'SMS',
+    status: 'success',
+    updatedAt: '2026-02-25T11:43:00+05:30',
+    retryable: false,
+  },
+  {
+    id: 'ns-02',
+    incidentId: 'INC-260214-1001',
+    contactId: 'ct-1002',
+    contactName: 'Rajat Verma',
+    channel: 'Push',
+    status: 'pending',
+    updatedAt: '2026-02-25T11:43:30+05:30',
+    retryable: true,
+  },
+  {
+    id: 'ns-03',
+    incidentId: 'INC-260214-1001',
+    contactId: 'ct-1003',
+    contactName: 'Mohan Sharma',
+    channel: 'Voice',
+    status: 'failed',
+    updatedAt: '2026-02-25T11:44:00+05:30',
+    retryable: true,
+  },
+];
